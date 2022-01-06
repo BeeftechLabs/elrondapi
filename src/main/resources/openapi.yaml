@@ -1,0 +1,251 @@
+swagger: "2.0"
+info:
+  description: "This is an alternative Elrond API created by PartnerStaking."
+  version: "0.0.1"
+  title: "Elrond API"
+  contact:
+    email: "contact@partnerstaking.com"
+  x-logo:
+    url: 'https://partnerstaking.com/images/logo.png'
+    altText: PartnerStaking
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+
+servers:
+  - url: //api.partnerstaking.com
+    description: Default server
+  - url: //api-alpha.partnerstaking.com
+    description: Alpha server
+
+tags:
+  - name: "transaction"
+    description: "Retrieve a transaction by hash"
+  - name: "transactions"
+    description: "Retrieve a set of transactions"
+  - name: "transaction_model"
+    x-displayName: Transaction
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/Transaction" />
+
+x-tagGroups:
+  - name: Transactions
+    tags:
+      - transaction
+      - transactions
+  - name: Models
+    tags:
+      - transaction_model
+
+schemes:
+  - "https"
+paths:
+  /transaction/{hash}:
+    get:
+      tags:
+        - "transaction"
+      summary: "Retrieve a transaction"
+      description: ""
+      operationId: "transaction"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "hash"
+          type: "string"
+          description: "Transaction hash"
+          required: true
+        - in: "query"
+          name: "process"
+          type: "boolean"
+          description: "Whether to process the transaction"
+          required: false
+          default: true
+      responses:
+        "400":
+          description: "Invalid hash"
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Transaction"
+  /transactions:
+    post:
+      tags:
+        - "transactions"
+      summary: "Get all transactions matching request"
+      description: ""
+      operationId: "transactions"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Get all transactions matching request"
+          required: true
+          schema:
+            $ref: '#/definitions/TransactionRequest'
+      responses:
+        "400":
+          description: "Missing address in request"
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/TransactionsResponse"
+
+components:
+  schemas:
+    Transaction:
+      type: "object"
+
+definitions:
+  Transaction:
+    type: "object"
+    properties:
+      hash:
+        type: "string"
+      sender:
+        type: "string"
+      receiver:
+        type: "string"
+      transactionValue:
+        $ref: '#/definitions/Value'
+      value:
+        $ref: '#/definitions/Value'
+      otherValue:
+        $ref: '#/definitions/Value'
+      data:
+        type: "string"
+      nonce:
+        type: "integer"
+        format: "int64"
+      gasLimit:
+        type: "integer"
+        format: "int64"
+      gasPrice:
+        type: "integer"
+        format: "int64"
+      gasUsed:
+        type: "integer"
+        format: "int64"
+      fee:
+        $ref: '#/definitions/Value'
+      timestamp:
+        type: "integer"
+        format: "int64"
+      senderShard:
+        type: "integer"
+        format: "int64"
+      receiverShard:
+        type: "integer"
+        format: "int64"
+      tokens:
+        type: "array"
+        items:
+          type: "string"
+      esdtValues:
+        type: "array"
+        items:
+          type: "string"
+      status:
+        type: "string"
+      type:
+        $ref: '#/definitions/TransactionType'
+      hasScResults:
+        type: "boolean"
+      isScCall:
+        type: "boolean"
+      scResults:
+        type: "array"
+        items:
+          $ref: '#/definitions/ScResult'
+  TransactionType:
+    type: "string"
+    enum: [Send, Receive, Delegate, Undelegate, Withdraw, Claim, Compound, Swap, Wrap, Unwrap, EnterFarm, ExitFarm, EnterLP, ExitLP, ModifyDelegationCap, ChangeServiceFee, ReceiveValidationReward, Unknown]
+  ScResult:
+    type: "object"
+    properties:
+      hash:
+        type: "string"
+      sender:
+        type: "string"
+      receiver:
+        type: "string"
+      value:
+        type: "string"
+      data:
+        type: "string"
+      nonce:
+        type: "integer"
+        format: "int64"
+      gasLimit:
+        type: "integer"
+        format: "int64"
+      gasPrice:
+        type: "integer"
+        format: "int64"
+      timestamp:
+        type: "integer"
+        format: "int64"
+      prevTxHash:
+        type: "string"
+      originalTxHash:
+        type: "string"
+      hasOperations:
+        type: "boolean"
+      tokens:
+        type: "array"
+        items:
+          type: "string"
+      esdtValues:
+        type: "array"
+        items:
+          type: "string"
+  Value:
+    type: "object"
+    properties:
+      bigNumber:
+        type: "string"
+      denominated:
+        type: "string"
+      token:
+        type: "string"
+
+  TransactionRequest:
+    type: "object"
+    properties:
+      address:
+        type: "string"
+      pageSize:
+        type: "integer"
+        default: 20
+      startTimestamp:
+        type: "integer"
+        format: "int64"
+        default: 0
+      newer:
+        type: "boolean"
+        default: true
+      includeScResults:
+        type: "boolean"
+        default: false
+      processTransactions:
+        type: "boolean"
+        default: true
+  TransactionsResponse:
+    type: "object"
+    properties:
+      transactions:
+        type: "array"
+        items:
+          $ref: '#/definitions/Transaction'
+      hasMore:
+        type: "boolean"
+      lastTimestamp:
+        type: "integer"
+        format: "int64"
