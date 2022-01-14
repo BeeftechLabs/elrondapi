@@ -20,22 +20,56 @@ servers:
 
 tags:
   - name: "transaction"
-    description: "Retrieve a transaction by hash"
-  - name: "transactions"
-    description: "Retrieve a set of transactions"
+    description: "Endpoints for getting or executing transactions"
   - name: "transaction_model"
     x-displayName: Transaction
     description: |
       <SchemaDefinition schemaRef="#/components/schemas/Transaction" />
 
+  - name: "address"
+    description: "Endpoints used to obtain information about an Address"
+  - name: "addressDetails_model"
+    x-displayName: AddressDetails
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/AddressDetails" />
+
+  - name: "node"
+    description: "Endpoints used to obtain information about Nodes and Staking"
+  - name: "node_model"
+    x-displayName: Node
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/Node" />
+  - name: "stakingProvider_model"
+    x-displayName: StakingProvider
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/StakingProvider" />
+
+  - name: "token"
+    description: "Endpoints used to obtain ESDT/NFT information"
+  - name: "token_model"
+    x-displayName: Token
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/Token" />
+  - name: "tokenProperties_model"
+    x-displayName: TokenProperties
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/TokenProperties" />
+
 x-tagGroups:
-  - name: Transactions
+  - name: Endpoints
     tags:
       - transaction
-      - transactions
+      - address
+      - node
+      - token
   - name: Models
     tags:
       - transaction_model
+      - addressDetails_model
+      - node_model
+      - stakingProvider_model
+      - token_model
+      - tokenProperties_model
 
 schemes:
   - "https"
@@ -44,8 +78,8 @@ paths:
     get:
       tags:
         - "transaction"
-      summary: "Retrieve a transaction"
-      description: ""
+      summary: "Get transaction"
+      description: "Get a transaction by hash"
       operationId: "transaction"
       consumes:
         - "application/json"
@@ -73,9 +107,9 @@ paths:
   /transactions:
     post:
       tags:
-        - "transactions"
-      summary: "Get all transactions matching request"
-      description: ""
+        - "transaction"
+      summary: "Get Transactions"
+      description: "Get all Transactions matching request"
       operationId: "transactions"
       consumes:
         - "application/json"
@@ -97,6 +131,140 @@ paths:
             type: "array"
             items:
               $ref: "#/definitions/TransactionsResponse"
+
+  /address/{address}:
+    get:
+      tags:
+        - "address"
+      summary: "Address Details"
+      description: "Get an Address' Details"
+      operationId: "getAddressDetails"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "address"
+          type: "string"
+          description: "Address in erd format"
+          required: true
+      responses:
+        "400":
+          description: "Invalid address"
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/AddressDetails"
+
+  /nodes:
+    get:
+      tags:
+        - "node"
+      summary: "Get Nodes"
+      description: "Get all Nodes (cached for 1h)"
+      operationId: "getNodes"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Node"
+
+  /stakingProviders:
+    get:
+      tags:
+        - "node"
+      summary: "Get Staking Providers"
+      description: "Get all Staking Providers (cached for 24h)"
+      operationId: "getStakingProviders"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/StakingProvider"
+
+  /delegators/{contractAddress}:
+    get:
+      tags:
+        - "node"
+      summary: "Get Delegators"
+      description: "Get Delegators for a Staking Provider by Contract Address"
+      operationId: "getDelegators"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "contractAddress"
+          type: "string"
+          description: "Staking Contract Address in erd format"
+          required: true
+      responses:
+        "400":
+          description: "Invalid address"
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Delegator"
+
+  /tokens:
+    get:
+      tags:
+        - "token"
+      summary: "Get Tokens"
+      description: "Get all Tokens (cached for 24h)"
+      operationId: "getTokens"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/TokenProperties"
+
+  /tokens/{address}:
+    get:
+      tags:
+        - "token"
+      summary: "Get Address Tokens"
+      description: "Get All Tokens for an Address"
+      operationId: "getTokensForAddress"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "address"
+          type: "string"
+          description: "Address in erd format"
+          required: true
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Token"
 
 components:
   schemas:
@@ -166,7 +334,8 @@ definitions:
           $ref: '#/definitions/ScResult'
   TransactionType:
     type: "string"
-    enum: [Send, Receive, Delegate, Undelegate, Withdraw, Claim, Compound, Swap, Wrap, Unwrap, EnterFarm, ExitFarm, EnterLP, ExitLP, ModifyDelegationCap, ChangeServiceFee, ReceiveValidationReward, Unknown]
+    enum: [Send, Receive, Delegate, Undelegate, Withdraw, Claim, Compound, Swap, Wrap, Unwrap, EnterFarm, ExitFarm,
+           EnterLP, ExitLP, ModifyDelegationCap, ChangeServiceFee, ReceiveValidationReward, Unknown]
   ScResult:
     type: "object"
     properties:
@@ -249,3 +418,140 @@ definitions:
       lastTimestamp:
         type: "integer"
         format: "int64"
+
+  AddressDetails:
+    type: "object"
+    properties:
+      address:
+        type: "string"
+      nonce:
+        type: "integer"
+        format: "int64"
+      balance:
+        $ref: '#/definitions/Value'
+      herotag:
+        type: "string"
+      ownerAddress:
+        type: "string"
+      tokens:
+        type: "array"
+        items:
+          $ref: '#/definitions/Token'
+      delegations:
+        type: "array"
+        items:
+          $ref: '#/definitions/AddressDelegation'
+
+  AddressDelegation:
+    type: "object"
+    properties:
+      stakingProvider:
+        $ref: '#/definitions/StakingProvider'
+      value:
+        $ref: '#/definitions/Value'
+
+  StakingProvider:
+    type: "object"
+    properties:
+      address:
+        type: "string"
+      owner:
+        type: "string"
+      serviceFee:
+        type: "number"
+        format: "double"
+      delegationCap:
+        type: "integer"
+        format: "int64"
+      metadata:
+        $ref: '#/definitions/StakingProviderMetadata'
+
+  StakingProviderMetadata:
+    type: "object"
+    properties:
+      name:
+        type: "string"
+      website:
+        type: "string"
+      keybaseIdentity:
+        type: "string"
+
+  Token:
+    type: "object"
+    properties:
+      value:
+        $ref: '#/definitions/Value'
+      properties:
+        $ref: '#/definitions/TokenProperties'
+
+  TokenProperties:
+    type: "object"
+    properties:
+      identifier:
+        type: "string"
+      name:
+        type: "string"
+      type:
+        type: "string"
+      owner:
+        type: "string"
+      minted:
+        type: "string"
+      burnt:
+        type: "string"
+      decimals:
+        type: "integer"
+      isPaused:
+        type: "boolean"
+      canUpgrade:
+        type: "boolean"
+      canMint:
+        type: "boolean"
+      canBurn:
+        type: "boolean"
+      canChangeOwner:
+        type: "boolean"
+      canPause:
+        type: "boolean"
+      canFreeze:
+        type: "boolean"
+      canWipe:
+        type: "boolean"
+      canAddSpecialRoles:
+        type: "boolean"
+      canTransferNFTCreateRole:
+        type: "boolean"
+      nftCreateStopped:
+        type: "boolean"
+      wiped:
+        type: "string"
+
+  Node:
+    type: "object"
+    properties:
+      identity:
+        type: "string"
+      name:
+        type: "string"
+      blsKey:
+        type: "string"
+      type:
+        $ref: '#/definitions/NodeType'
+      eligible:
+        type: "boolean"
+      provider:
+        type: "string"
+      owner:
+        type: "string"
+
+  NodeType:
+    type: "string"
+    enum: [ Validator, Observer ]
+
+  Delegator:
+    type: "object"
+    properties:
+      address:
+        type: "string"
+      value:
+        $ref: '#/definitions/Value'

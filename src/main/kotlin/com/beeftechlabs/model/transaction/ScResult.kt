@@ -1,5 +1,6 @@
-package com.beeftechlabs.model
+package com.beeftechlabs.model.transaction
 
+import com.beeftechlabs.model.elastic.ElasticScResult
 import kotlinx.serialization.Serializable
 
 @Serializable

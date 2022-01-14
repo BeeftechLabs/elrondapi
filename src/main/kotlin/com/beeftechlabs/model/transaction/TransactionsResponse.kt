@@ -1,4 +1,4 @@
-package com.beeftechlabs.model
+package com.beeftechlabs.model.transaction
 
 import kotlinx.serialization.Serializable
 

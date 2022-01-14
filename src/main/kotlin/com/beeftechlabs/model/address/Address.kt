@@ -1,5 +1,7 @@
-package com.beeftechlabs.util
+package com.beeftechlabs.model.address
 
+import com.beeftechlabs.util.Bech32
+import com.beeftechlabs.util.convertBits
 import com.soywiz.krypto.encoding.hex
 import com.soywiz.krypto.encoding.unhex
 
@@ -8,6 +10,10 @@ data class Address private constructor(
     val hex: String = ""
 ) {
     constructor(value: String) : this(erd = erdValue(value), hex = hexValue(value))
+
+    fun isSmartContract(): Boolean {
+        return false // todo
+    }
 
     companion object {
         private const val HRP = "erd"

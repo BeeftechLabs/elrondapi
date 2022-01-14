@@ -1,8 +1,16 @@
 package com.beeftechlabs.plugins
 
-import com.beeftechlabs.model.TransactionsRequest
+import com.beeftechlabs.cache.getFromStore
+import com.beeftechlabs.config
+import com.beeftechlabs.model.core.Nodes
+import com.beeftechlabs.model.transaction.TransactionsRequest
 import com.beeftechlabs.processing.TransactionProcessor
+import com.beeftechlabs.repository.token.address.AddressRepository
+import com.beeftechlabs.repository.StakingProviders
+import com.beeftechlabs.repository.ElasticRepository
 import com.beeftechlabs.repository.TransactionRepository
+import com.beeftechlabs.repository.token.AllTokens
+import com.beeftechlabs.repository.token.TokenRepository
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.http.content.*
@@ -15,7 +23,6 @@ import kotlinx.coroutines.withContext
 fun Application.configureRouting() {
 
     routing {
-        
         static {
             resource("/", "index.html")
             resource("*", "index.html")
@@ -23,31 +30,90 @@ fun Application.configureRouting() {
             resource("/openapi.yaml", "openapi.yaml")
         }
 
-        post("/transactions") {
-            try {
-                val request = call.receive<TransactionsRequest>()
+        if (config.hasElastic) {
+            post("/transactions") {
+                try {
+                    val request = call.receive<TransactionsRequest>()
 
-                withContext(Dispatchers.IO) {
-                    call.respond(TransactionRepository.getTransactions(request))
+                    withContext(Dispatchers.IO) {
+                        call.respond(TransactionRepository.getTransactions(request))
+                    }
+                } catch (exception: Exception) {
+                    call.response.status(HttpStatusCode.BadRequest)
                 }
-            } catch (exception: Exception) {
-                call.response.status(HttpStatusCode.BadRequest)
+            }
+
+            get("/transaction/{hash}") {
+                val hash = call.parameters["hash"]
+                val process = call.request.queryParameters["process"]?.toBooleanStrictOrNull() ?: true
+                if (hash.isNullOrEmpty()) {
+                    call.response.status(HttpStatusCode.BadRequest)
+                } else {
+                    TransactionRepository.getTransaction(hash, process)?.let { transaction ->
+                        if (process) {
+                            withContext(Dispatchers.Default) {
+                                call.respond(TransactionProcessor.process(transaction.sender, transaction))
+                            }
+                        } else {
+                            call.respond(transaction)
+                        }
+                    } ?: call.response.status(HttpStatusCode.BadRequest)
+                }
             }
         }
 
-        get("/transaction/{hash}") {
-            val hash = call.parameters["hash"]
-            val process = call.request.queryParameters["process"]?.toBooleanStrictOrNull() ?: true
-            if (hash.isNullOrEmpty()) {
-                call.response.status(HttpStatusCode.BadRequest)
-            } else {
-                TransactionRepository.getTransaction(hash, process)?.let { transaction ->
-                    if (process) {
-                        call.respond(TransactionProcessor.process(transaction.sender, transaction))
-                    } else {
-                        call.respond(transaction)
+        if (config.hasElrondConfig) {
+            get("/address/{address}") {
+                val address = call.parameters["address"]
+                if (address.isNullOrEmpty()) {
+                    call.response.status(HttpStatusCode.BadRequest)
+                } else {
+                    withContext(Dispatchers.IO) {
+                        call.respond(AddressRepository.getAddressDetails(address))
                     }
-                } ?: call.response.status(HttpStatusCode.BadRequest)
+                }
+            }
+
+            if (config.hasElastic) {
+                get("/nodes") {
+                    withContext(Dispatchers.IO) {
+                        call.respond(getFromStore<Nodes>().value)
+                    }
+                }
+
+                get("/stakingProviders") {
+                    withContext(Dispatchers.IO) {
+                        call.respond(getFromStore<StakingProviders>().value)
+                    }
+                }
+
+                get("/delegators/{delegationContract}") {
+                    val delegationContract = call.parameters["delegationContract"]
+                    if (delegationContract.isNullOrEmpty()) {
+                        call.response.status(HttpStatusCode.BadRequest)
+                    } else {
+                        withContext(Dispatchers.IO) {
+                            call.respond(ElasticRepository.getDelegators(delegationContract))
+                        }
+                    }
+                }
+            }
+
+            get("/tokens") {
+                withContext(Dispatchers.IO) {
+                    call.respond(getFromStore<AllTokens>().value)
+                }
+            }
+
+            get("/tokens/{address}") {
+                val address = call.parameters["address"]
+                if (address.isNullOrEmpty()) {
+                    call.response.status(HttpStatusCode.BadRequest)
+                } else {
+                    withContext(Dispatchers.IO) {
+                        call.respond(TokenRepository.getTokensForAddress(address))
+                    }
+                }
             }
         }
     }

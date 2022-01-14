@@ -1,11 +1,9 @@
-package com.beeftechlabs.model
+package com.beeftechlabs.model.token
 
 import com.beeftechlabs.util.denominated
 import com.beeftechlabs.util.denominatedBigDecimal
-import com.beeftechlabs.util.fromHexString
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import com.ionspin.kotlin.bignum.integer.toBigInteger
-import com.soywiz.krypto.encoding.fromHex
 import kotlinx.serialization.Serializable
 
 @Serializable

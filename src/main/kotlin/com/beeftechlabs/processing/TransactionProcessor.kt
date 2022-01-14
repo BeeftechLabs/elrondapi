@@ -1,9 +1,9 @@
 package com.beeftechlabs.processing
 
-import com.beeftechlabs.model.Transaction
-import com.beeftechlabs.model.TransactionType
-import com.beeftechlabs.model.Value
-import com.beeftechlabs.util.Address
+import com.beeftechlabs.model.transaction.Transaction
+import com.beeftechlabs.model.transaction.TransactionType
+import com.beeftechlabs.model.token.Value
+import com.beeftechlabs.model.address.Address
 import com.beeftechlabs.util.fromBase64String
 import com.beeftechlabs.util.fromHexString
 import com.beeftechlabs.util.tokenFromArg

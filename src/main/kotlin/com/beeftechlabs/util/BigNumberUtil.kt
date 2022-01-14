@@ -22,4 +22,6 @@ fun BigDecimal.formatted(roundPosition: Int = 5): String =
 fun BigDecimal.toDouble(roundPosition: Int = 5): Double =
     roundToDigitPosition(roundPosition.toLong(), RoundingMode.FLOOR).doubleValue()
 
+fun BigDecimal.toLong(): Long = toBigInteger().longValue()
+
 fun BigDecimal.nominated() = multiply(denomination)
