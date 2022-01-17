@@ -1,12 +1,15 @@
 package com.beeftechlabs.plugins
 
 import com.beeftechlabs.config
+import com.beeftechlabs.model.network.NetworkConfig
+import com.beeftechlabs.model.network.NetworkStatus
 import com.beeftechlabs.model.transaction.TransactionsRequest
 import com.beeftechlabs.processing.TransactionProcessor
 import com.beeftechlabs.repository.ElasticRepository
 import com.beeftechlabs.repository.Nodes
 import com.beeftechlabs.repository.StakingProviders
 import com.beeftechlabs.repository.TransactionRepository
+import com.beeftechlabs.repository.network.cached
 import com.beeftechlabs.repository.token.AllTokens
 import com.beeftechlabs.repository.token.TokenRepository
 import com.beeftechlabs.repository.token.address.AddressRepository
@@ -71,6 +74,14 @@ fun Application.configureRouting() {
                         call.respond(AddressRepository.getAddressDetails(address))
                     }
                 }
+            }
+
+            get("/network/config") {
+                call.respond(NetworkConfig.cached())
+            }
+
+            get("/network/status") {
+                call.respond(NetworkStatus.cached())
             }
 
             if (config.hasElastic) {

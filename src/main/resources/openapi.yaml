@@ -55,6 +55,17 @@ tags:
     description: |
       <SchemaDefinition schemaRef="#/components/schemas/TokenProperties" />
 
+  - name: "network"
+    description: "Endpoints used to obtain Elrond network information"
+  - name: "networkconfig_model"
+    x-displayName: NetworkConfig
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/NetworkConfig" />
+  - name: "networkstatus_model"
+    x-displayName: NetworkStatus
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/NetworkStatus" />
+
 x-tagGroups:
   - name: Endpoints
     tags:
@@ -62,6 +73,7 @@ x-tagGroups:
       - address
       - node
       - token
+      - network
   - name: Models
     tags:
       - transaction_model
@@ -70,6 +82,8 @@ x-tagGroups:
       - stakingProvider_model
       - token_model
       - tokenProperties_model
+      - networkconfig_model
+      - networkstatus_model
 
 schemes:
   - "https"
@@ -266,6 +280,38 @@ paths:
             items:
               $ref: "#/definitions/Token"
 
+  /network/config:
+    get:
+      tags:
+        - "network"
+      summary: "Get the Network Config"
+      operationId: "networkConfig"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/NetworkConfig"
+
+  /network/status:
+    get:
+      tags:
+        - "network"
+      summary: "Get the Network Status"
+      operationId: "networkStatus"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/NetworkStatus"
+
 components:
   schemas:
     Transaction:
@@ -449,6 +495,10 @@ definitions:
         $ref: '#/definitions/StakingProvider'
       value:
         $ref: '#/definitions/Value'
+      undelegatedList:
+        type: "array"
+        items:
+          $ref: '#/definitions/UndelegatedValue'
 
   StakingProvider:
     type: "object"
@@ -555,3 +605,87 @@ definitions:
         type: "string"
       value:
         $ref: '#/definitions/Value'
+
+  UndelegatedValue:
+    type: "object"
+    properties:
+      value:
+        $ref: '#/definitions/Value'
+      millisRemaining:
+        type: "integer"
+        format: "int64"
+
+  NetworkConfig:
+    type: "object"
+    properties:
+      chainId:
+        type: "string"
+      denomination:
+        type: "integer"
+      gasPerDataByte:
+        type: "integer"
+      gasPriceModifier:
+        type: "double"
+      latestTagSoftwareVersion:
+        type: "string"
+      maxGasPerTransaction:
+        type: "integer"
+        format: "int64"
+      minGasLimit:
+        type: "integer"
+        format: "int64"
+      minGasPrice:
+        type: "integer"
+        format: "int64"
+      minTransactionVersion:
+        type: "integer"
+      numMetachainNodes:
+        type: "integer"
+      numNodesInShard:
+        type: "integer"
+      numShardsWithoutMeta:
+        type: "integer"
+      rewardsTopUpGradientPoint:
+        type: "string"
+      roundDuration:
+        type: "integer"
+      roundsPerEpoch:
+        type: "integer"
+      metaConsensusGroupSize:
+        type: "integer"
+      shardConsensusGroupSize:
+        type: "integer"
+      startTime:
+        type: "integer"
+        format: "int64"
+      topUpFactor:
+        type: "double"
+
+  NetworkStatus:
+    type: "object"
+    properties:
+      currentRound:
+        type: "integer"
+        format: "int64"
+      epochNumber:
+        type: "integer"
+        format: "int64"
+      highestFinalNonce:
+        type: "integer"
+        format: "int64"
+      nonce:
+        type: "integer"
+        format: "int64"
+      nonceAtEpochStart:
+        type: "integer"
+        format: "int64"
+      noncesPassedInCurrentEpoch:
+        type: "integer"
+        format: "int64"
+      roundsAtEpochStart:
+        type: "integer"
+        format: "int64"
+      roundsPassedInCurrentEpoch:
+        type: "integer"
+      roundsPerEpoch:
+        type: "integer"
