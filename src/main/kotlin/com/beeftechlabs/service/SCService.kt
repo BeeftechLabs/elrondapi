@@ -1,9 +1,8 @@
-package com.beeftechlabs.repository
+package com.beeftechlabs.service
 
 import com.beeftechlabs.model.smartcontract.ScQueryRequest
-import com.beeftechlabs.service.GatewayService
 
-object SCRepository {
+object SCService {
 
     suspend fun vmQuery(
         contract: String,

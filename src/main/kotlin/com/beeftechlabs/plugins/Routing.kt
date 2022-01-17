@@ -1,16 +1,15 @@
 package com.beeftechlabs.plugins
 
-import com.beeftechlabs.cache.getFromStore
 import com.beeftechlabs.config
-import com.beeftechlabs.model.core.Nodes
 import com.beeftechlabs.model.transaction.TransactionsRequest
 import com.beeftechlabs.processing.TransactionProcessor
-import com.beeftechlabs.repository.token.address.AddressRepository
-import com.beeftechlabs.repository.StakingProviders
 import com.beeftechlabs.repository.ElasticRepository
+import com.beeftechlabs.repository.Nodes
+import com.beeftechlabs.repository.StakingProviders
 import com.beeftechlabs.repository.TransactionRepository
 import com.beeftechlabs.repository.token.AllTokens
 import com.beeftechlabs.repository.token.TokenRepository
+import com.beeftechlabs.repository.token.address.AddressRepository
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.http.content.*
@@ -77,13 +76,13 @@ fun Application.configureRouting() {
             if (config.hasElastic) {
                 get("/nodes") {
                     withContext(Dispatchers.IO) {
-                        call.respond(getFromStore<Nodes>().value)
+                        call.respond(Nodes.cached().value)
                     }
                 }
 
                 get("/stakingProviders") {
                     withContext(Dispatchers.IO) {
-                        call.respond(getFromStore<StakingProviders>().value)
+                        call.respond(StakingProviders.cached().value)
                     }
                 }
 
@@ -101,7 +100,7 @@ fun Application.configureRouting() {
 
             get("/tokens") {
                 withContext(Dispatchers.IO) {
-                    call.respond(getFromStore<AllTokens>().value)
+                    call.respond(AllTokens.cached().value)
                 }
             }
 

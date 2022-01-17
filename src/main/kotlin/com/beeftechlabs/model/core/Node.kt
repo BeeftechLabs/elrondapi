@@ -23,7 +23,3 @@ enum class NodeType {
         }
     }
 }
-
-data class Nodes(
-    val value: List<Node>
-)

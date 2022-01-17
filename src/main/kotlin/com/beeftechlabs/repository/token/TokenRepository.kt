@@ -1,6 +1,7 @@
 package com.beeftechlabs.repository.token
 
-import com.beeftechlabs.cache.getFromStoreStrictly
+import com.beeftechlabs.cache.CacheType
+import com.beeftechlabs.cache.withCache
 import com.beeftechlabs.config
 import com.beeftechlabs.model.address.Address
 import com.beeftechlabs.model.smartcontract.ScQueryRequest
@@ -17,27 +18,21 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 
-data class AllTokens(
-    val value: List<TokenProperties>
-)
-
 object TokenRepository {
 
     private val elrondConfig by lazy { config.elrond!! }
 
     suspend fun getAllTokens(): AllTokens =
-        getFromStoreStrictly() ?: run {
-            coroutineScope {
-                val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/fungible-tokens").data.tokens
+        coroutineScope {
+            val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/fungible-tokens").data.tokens
 
-                val tokenProperties = fungibles.chunked(NUM_PARALLEL_FETCH)
-                    .map { chunk -> chunk.map { async { getTokenProperties(it) } }.awaitAll() }
-                    .flatten()
+            val tokenProperties = fungibles.chunked(NUM_PARALLEL_FETCH)
+                .map { chunk -> chunk.map { async { getTokenProperties(it) } }.awaitAll() }
+                .flatten()
 
-                // todo get assets
+            // todo get assets
 
-                AllTokens(tokenProperties)
-            }
+            AllTokens(tokenProperties)
         }
 
     suspend fun getTokensForAddress(address: String): List<Token> = coroutineScope {
@@ -45,7 +40,7 @@ object TokenRepository {
         val tokensDeferred = async { getAllTokens() }
 
         val esdts = esdtsDeferred.await()
-        val tokens = tokensDeferred.await().value.map { it.identifier to it }.toMap()
+        val tokens = tokensDeferred.await().value.associateBy { it.identifier }
 
         esdts.mapNotNull { esdt ->
             tokens[esdt.tokenIdentifier]?.let { props ->
@@ -104,3 +99,10 @@ object TokenRepository {
     private const val NUM_PARALLEL_FETCH = 100
 }
 
+data class AllTokens(
+    val value: List<TokenProperties>
+) {
+    companion object {
+        suspend fun cached() = withCache(CacheType.Tokens) { TokenRepository.getAllTokens() }
+    }
+}

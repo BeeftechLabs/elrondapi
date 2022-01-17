@@ -7,5 +7,12 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class AddressDelegation(
     val stakingProvider: StakingProvider,
-    val value: Value
+    val value: Value,
+    val undelegatedList: List<UndelegatedValue> = emptyList()
+)
+
+@Serializable
+data class UndelegatedValue(
+    val value: Value,
+    val millisRemaining: Long
 )

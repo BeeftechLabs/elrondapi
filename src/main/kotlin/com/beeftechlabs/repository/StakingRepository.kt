@@ -1,11 +1,18 @@
 package com.beeftechlabs.repository
 
-import com.beeftechlabs.cache.getFromStore
-import com.beeftechlabs.cache.getFromStoreStrictly
+import com.beeftechlabs.cache.CacheType
+import com.beeftechlabs.cache.tryCache
+import com.beeftechlabs.cache.withCache
 import com.beeftechlabs.config
 import com.beeftechlabs.model.address.Address
 import com.beeftechlabs.model.address.AddressDelegation
+import com.beeftechlabs.model.address.UndelegatedValue
 import com.beeftechlabs.model.core.StakingProvider
+import com.beeftechlabs.model.network.NetworkConfig
+import com.beeftechlabs.model.network.NetworkStatus
+import com.beeftechlabs.model.token.Value
+import com.beeftechlabs.repository.network.cached
+import com.beeftechlabs.service.SCService
 import com.beeftechlabs.util.*
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.ionspin.kotlin.bignum.integer.toBigInteger
@@ -15,32 +22,56 @@ object StakingRepository {
 
     private val elrondConfig by lazy { config.elrond!! }
 
-    suspend fun getDelegations(address: String): List<AddressDelegation> {
-        val providers = getFromStore<StakingProviders>().value
-        val delegations = ElasticRepository.getDelegations(address)
-        return delegations.map { delegation ->
-            delegation.copy(stakingProvider = providers.find { it.address == delegation.stakingProvider.address }
-                ?: delegation.stakingProvider)
+    suspend fun getDelegations(address: String): List<AddressDelegation> = coroutineScope {
+        val providers = async { StakingProviders.cached().value }
+        val delegationsDeferred = async {
+            withCache(CacheType.AddressDelegations, address) {
+                ElasticRepository.getDelegations(address)
+            }
+        }
+        val networkConfig = async { NetworkConfig.cached() }
+        val networkStatus = async { NetworkStatus.cached() }
+
+        val delegations = delegationsDeferred.await()
+
+        val undelegations =
+            withCache(CacheType.AddressUndelegations, address) {
+                delegations.map {
+                    it.stakingProvider.address to async {
+                        getAddressUndelegatedListForContract(
+                            address,
+                            it.stakingProvider.address,
+                            networkConfig.await(),
+                            networkStatus.await()
+                        )
+                    }
+                }.associate { it.first to it.second.await() }
+            }
+
+        delegations.map { delegation ->
+            delegation.copy(
+                stakingProvider = providers.await().find { it.address == delegation.stakingProvider.address }
+                    ?: delegation.stakingProvider,
+                undelegatedList = undelegations[delegation.stakingProvider.address] ?: emptyList()
+            )
         }
     }
 
     suspend fun getDelegationProviders(): StakingProviders {
-        return getFromStoreStrictly<StakingProviders>() ?: run {
-            val providerAddresses =
-                SCRepository.vmQuery(elrondConfig.delegationManager, "getAllContractAddresses").map {
-                    Address(it.fromBase64ToHexString()).erd
-                }
-            StakingProviders(
-                withContext(Dispatchers.IO) {
-                    providerAddresses
-                        .chunked(NUM_PARALLEL_PROVIDER_FETCH)
-                        .map { chunks ->
-                            chunks.map { async { getProviderDetails(it) } }.awaitAll()
-                        }
-                        .flatten().mapNotNull { it }
-                }
-            )
-        }
+        val providerAddresses =
+            SCService.vmQuery(elrondConfig.delegationManager, "getAllContractAddresses").map {
+                Address(it.fromBase64ToHexString()).erd
+            }
+        return StakingProviders(
+            withContext(Dispatchers.IO) {
+                providerAddresses
+                    .chunked(NUM_PARALLEL_PROVIDER_FETCH)
+                    .map { chunks ->
+                        chunks.map { async { getProviderDetails(it) } }.awaitAll()
+                    }
+                    .flatten().mapNotNull { it }
+            }
+        )
     }
 
     private suspend fun getProviderDetails(address: String): StakingProvider? = coroutineScope {
@@ -50,7 +81,7 @@ object StakingRepository {
     }
 
     private suspend fun getDelegationContractConfig(address: String): StakingProvider? {
-        val contractConfig = SCRepository.vmQuery(address, "getContractConfig")
+        val contractConfig = SCService.vmQuery(address, "getContractConfig")
         if (contractConfig.size < 3) {
             return null
         }
@@ -78,7 +109,7 @@ object StakingRepository {
     }
 
     private suspend fun getDelegationContractMetadata(address: String): StakingProvider.Metadata? {
-        val metadata = SCRepository.vmQuery(address, "getMetaData")
+        val metadata = SCService.vmQuery(address, "getMetaData")
         if (metadata.size < 3) {
             return null
         }
@@ -90,9 +121,35 @@ object StakingRepository {
         )
     }
 
+    private suspend fun getAddressUndelegatedListForContract(
+        address: String,
+        contract: String,
+        networkConfig: NetworkConfig,
+        networkStatus: NetworkStatus
+    ): List<UndelegatedValue> {
+        val response = SCService.vmQuery(contract, "getUserUnDelegatedList", listOf(Address(address).hex))
+
+        val roundsRemaining by lazy { networkConfig.roundsPerEpoch - networkStatus.roundsPassedInCurrentEpoch }
+
+        return response.zipWithNext().map { (valueBase64, epochsRemainingBase64) ->
+            val roundsUntilComplete =
+                ((epochsRemainingBase64.vmQueryToLong() - 1) * networkConfig.roundsPerEpoch) + roundsRemaining
+            val timeLeft = roundsUntilComplete * networkConfig.roundDuration
+
+            UndelegatedValue(
+                Value.extractHex(valueBase64.fromBase64ToHexString(), "EGLD"),
+                timeLeft.coerceAtLeast(0)
+            )
+        }
+    }
+
     private const val NUM_PARALLEL_PROVIDER_FETCH = 100
 }
 
 data class StakingProviders(
     val value: List<StakingProvider>
-)
+) {
+    companion object {
+        suspend fun cached() = withCache(CacheType.StakingProviders) { StakingRepository.getDelegationProviders() }
+    }
+}
