@@ -5,13 +5,14 @@ import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
-object InMemoryStore : Store {
+object InMemoryStore {
 
-    private val store = mutableMapOf<String, Pair<Any, Long>>()
+    private val store = mutableMapOf<String, Pair<Any, Long>?>()
 
-    override fun <T> get(key: String, ttl: Duration): T? {
+    fun <T> get(key: String, ttl: Duration): T? {
         return store[key]?.let { (data, storedAt) ->
             if ((getTimeMillis() - storedAt).toDuration(DurationUnit.MILLISECONDS) > ttl) {
+                store[key] = null
                 null
             } else {
                 data as? T
@@ -19,11 +20,11 @@ object InMemoryStore : Store {
         }
     }
 
-    override fun <T> peek(key: String, ttl: Duration): T? {
+    fun <T> peek(key: String, ttl: Duration): T? {
         return store[key] as? T
     }
 
-    override fun <T> set(key: String, data: T?) {
+    fun <T> set(key: String, data: T?) {
         store[key] = data as Any to getTimeMillis()
     }
 }

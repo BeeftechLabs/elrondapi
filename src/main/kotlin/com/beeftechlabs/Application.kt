@@ -1,5 +1,6 @@
 package com.beeftechlabs
 
+import com.beeftechlabs.cache.RedisStore
 import com.beeftechlabs.plugins.configureHTTP
 import com.beeftechlabs.plugins.configureMonitoring
 import com.beeftechlabs.plugins.configureRouting
@@ -9,9 +10,11 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import java.io.File
 
-val config = ConfigLoader().loadConfigOrThrow<Config>(File("config.yaml"))
+val config = ConfigLoader().loadConfigOrThrow<Config>(File("config-dev.yaml"), File("config.yaml"))
 
 fun main() {
+    RedisStore.initialize()
+
     embeddedServer(Netty, port = config.port) {
         configureRouting()
         configureSerialization()

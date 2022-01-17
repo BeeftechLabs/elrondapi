@@ -1,25 +1,27 @@
 package com.beeftechlabs.cache
 
-import kotlin.reflect.KClass
-import kotlin.reflect.jvm.jvmName
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 
-fun KClass<out Any>.key() = jvmName
-
 inline fun <reified T> tryCache(key: String, ttl: Duration): T? {
     return InMemoryStore.get(key, ttl)
+        ?: RedisStore.get<T?>(key, ttl)?.also { InMemoryStore.set(key, it) }
 }
 
 inline fun <reified T> peekCache(type: CacheType): T? {
-    val key = T::class.jvmName
-    return InMemoryStore.peek(key, type.ttl)
+    return InMemoryStore.peek(type.name, type.ttl) ?: RedisStore.peek(type.name, type.ttl)
 }
 
-inline fun <reified T> putInCache(key: String, data: T?) = InMemoryStore.set(key, data)
+suspend inline fun <reified T> putInCache(key: String, data: T?) = coroutineScope {
+    launch(Dispatchers.IO) { RedisStore.set(key, data) }
+    InMemoryStore.set(key, data)
+}
 
-inline fun <reified T> withCache(type: CacheType, instance: String = "", producer: () -> T): T {
+suspend inline fun <reified T> withCache(type: CacheType, instance: String = "", producer: () -> T): T {
     val key = if (instance.isNotEmpty()) "${type.name}:$instance" else type.name
 
     return tryCache(key, type.ttl) ?: producer().also { putInCache(key, it) }
@@ -33,13 +35,4 @@ enum class CacheType(val ttl: Duration) {
     NetworkStatus(5.minutes),
     AddressDelegations(5.minutes),
     AddressUndelegations(5.minutes)
-}
-
-interface Store {
-
-    fun <T> get(key: String, ttl: Duration): T?
-
-    fun <T> peek(key: String, ttl: Duration): T?
-
-    fun <T> set(key: String, data: T?)
 }

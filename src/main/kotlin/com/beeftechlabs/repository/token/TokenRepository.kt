@@ -17,6 +17,7 @@ import com.beeftechlabs.util.toHexString
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.serialization.Serializable
 
 object TokenRepository {
 
@@ -99,6 +100,7 @@ object TokenRepository {
     private const val NUM_PARALLEL_FETCH = 100
 }
 
+@Serializable
 data class AllTokens(
     val value: List<TokenProperties>
 ) {

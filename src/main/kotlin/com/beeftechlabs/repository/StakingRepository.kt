@@ -17,6 +17,7 @@ import com.beeftechlabs.util.*
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.ionspin.kotlin.bignum.integer.toBigInteger
 import kotlinx.coroutines.*
+import kotlinx.serialization.Serializable
 
 object StakingRepository {
 
@@ -146,6 +147,7 @@ object StakingRepository {
     private const val NUM_PARALLEL_PROVIDER_FETCH = 100
 }
 
+@Serializable
 data class StakingProviders(
     val value: List<StakingProvider>
 ) {

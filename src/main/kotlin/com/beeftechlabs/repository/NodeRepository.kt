@@ -12,6 +12,7 @@ import com.beeftechlabs.service.GatewayService
 import com.beeftechlabs.service.SCService
 import com.beeftechlabs.util.fromBase64ToHexString
 import kotlinx.coroutines.*
+import kotlinx.serialization.Serializable
 
 object NodeRepository {
 
@@ -67,6 +68,7 @@ object NodeRepository {
     private const val NUM_PARALLEL_OWNER_FETCH = 200
 }
 
+@Serializable
 data class Nodes(
     val value: List<Node>
 ) {

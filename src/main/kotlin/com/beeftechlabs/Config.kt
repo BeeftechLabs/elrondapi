@@ -4,7 +4,8 @@ data class Config(
     val port: Int,
     val elastic: Elastic?,
     val maxPageSize: Int,
-    val elrond: Elrond?
+    val elrond: Elrond?,
+    val redis: Redis?
 ) {
     val hasElastic = elastic != null
     val hasElrondConfig = elrond != null
@@ -22,4 +23,8 @@ data class Elrond(
     val staking: String,
     val auction: String,
     val esdt: String
+)
+
+data class Redis(
+    val url: String
 )
