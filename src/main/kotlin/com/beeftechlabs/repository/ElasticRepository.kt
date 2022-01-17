@@ -136,36 +136,35 @@ object ElasticRepository {
 
             var transactionsWithScResults = transactions
 
-            val scResultsDeferred = transactions.filter { it.hasScResults }.map {
-                coroutineScope { async { getScResultsForTransaction(it.hash) } }
-            }
-            val allScResults = scResultsDeferred.awaitAll()
-
-            allScResults.forEach { scResults ->
-                if (scResults.isNotEmpty()) {
-                    val hash = scResults.first().originalTxHash
-                    transactionsWithScResults = transactionsWithScResults.map {
-                        if (it.hash == hash) {
-                            it.copy(scResults = scResults)
-                        } else {
-                            it
-                        }
-                    }
-                }
-            }
-
-            // TODO: fix this
-//            val allScResults = getScResultsForTransactions(transactions.map { it.hash })
+//            val scResultsDeferred = transactions.filter { it.hasScResults }.map {
+//                coroutineScope { async { getScResultsForTransaction(it.hash) } }
+//            }
+//            val allScResults = scResultsDeferred.awaitAll()
 //
-//            allScResults.groupBy { it.originalTxHash }.forEach { entry ->
-//                transactionsWithScResults = transactionsWithScResults.map {
-//                    if (it.hash == entry.key) {
-//                        it.copy(scResults = entry.value)
-//                    } else {
-//                        it
+//            allScResults.forEach { scResults ->
+//                if (scResults.isNotEmpty()) {
+//                    val hash = scResults.first().originalTxHash
+//                    transactionsWithScResults = transactionsWithScResults.map {
+//                        if (it.hash == hash) {
+//                            it.copy(scResults = scResults)
+//                        } else {
+//                            it
+//                        }
 //                    }
 //                }
 //            }
+
+            val allScResults = getScResultsForTransactions(transactions.map { it.hash })
+
+            allScResults.groupBy { it.originalTxHash }.forEach { entry ->
+                transactionsWithScResults = transactionsWithScResults.map {
+                    if (it.hash == entry.key) {
+                        it.copy(scResults = entry.value)
+                    } else {
+                        it
+                    }
+                }
+            }
 
             println("Fetching scResults took ${getTimeMillis() - startSc} millis")
 
