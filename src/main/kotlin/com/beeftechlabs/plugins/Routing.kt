@@ -34,14 +34,10 @@ fun Application.configureRouting() {
 
         if (config.hasElastic) {
             post("/transactions") {
-                try {
-                    val request = call.receive<TransactionsRequest>()
+                val request = call.receive<TransactionsRequest>()
 
-                    withContext(Dispatchers.IO) {
-                        call.respond(TransactionRepository.getTransactions(request))
-                    }
-                } catch (exception: Exception) {
-                    call.response.status(HttpStatusCode.BadRequest)
+                withContext(Dispatchers.IO) {
+                    call.respond(TransactionRepository.getTransactions(request))
                 }
             }
 

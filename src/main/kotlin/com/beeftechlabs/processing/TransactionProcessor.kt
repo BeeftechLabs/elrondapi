@@ -1,9 +1,9 @@
 package com.beeftechlabs.processing
 
+import com.beeftechlabs.model.address.Address
+import com.beeftechlabs.model.token.Value
 import com.beeftechlabs.model.transaction.Transaction
 import com.beeftechlabs.model.transaction.TransactionType
-import com.beeftechlabs.model.token.Value
-import com.beeftechlabs.model.address.Address
 import com.beeftechlabs.util.fromBase64String
 import com.beeftechlabs.util.fromHexString
 import com.beeftechlabs.util.tokenFromArg
@@ -172,8 +172,9 @@ object TransactionProcessor {
                 transactionType = TransactionType.ModifyDelegationCap
             }
             "claimRewards" -> {
-                val claimScResult = transaction.scResults.first { it.data.isEmpty() }
-                value = Value.extract(claimScResult.value, "EGLD")
+                transaction.scResults.firstOrNull { it.data.isEmpty() }?.let {
+                    value = Value.extract(it.value, "EGLD")
+                }
                 transactionType = TransactionType.Claim
             }
             "unDelegate", "unStake" -> {
@@ -181,15 +182,17 @@ object TransactionProcessor {
                 transactionType = TransactionType.Undelegate
             }
             "reDelegateRewards" -> {
-                val claimScResult = transaction.scResults.first { it.data.isEmpty() }
-                value = Value.extract(claimScResult.value, "EGLD")
+                transaction.scResults.firstOrNull { it.data.isEmpty() }?.let {
+                    value = Value.extract(it.value, "EGLD")
+                }
                 transactionType = TransactionType.Compound
             }
             "withdraw", "unBond" -> {
-                val claimScResult = transaction.scResults
+                transaction.scResults
                     .filter { it.receiver == referenceAddress }
-                    .first { it.data.isEmpty() }
-                value = Value.extract(claimScResult.value, "EGLD")
+                    .firstOrNull { it.data.isEmpty() }?.let {
+                        value = Value.extract(it.value, "EGLD")
+                    }
                 transactionType = TransactionType.Withdraw
             }
             "changeServiceFee" -> {
