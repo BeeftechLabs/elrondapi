@@ -10,7 +10,12 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import java.io.File
 
-val config = ConfigLoader().loadConfigOrThrow<Config>(File("config-dev.yaml"), File("config.yaml"))
+val config = ConfigLoader().loadConfigOrThrow<Config>(
+    listOfNotNull(
+        File("config-dev.yaml").takeIf { it.exists() },
+        File("config.yaml")
+    )
+)
 
 fun main() {
     RedisStore.initialize()

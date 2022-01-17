@@ -39,8 +39,6 @@ object RedisStore {
                     value as? T
                 }
             }
-        }?.also {
-            println("Read from redis: $key:$it")
         }
     }
 
@@ -54,7 +52,6 @@ object RedisStore {
     }
 
     inline fun <reified T> set(key: String, data: T?) {
-        println("Writing to redis: $key:$data")
         jedis?.set(key, json.encodeToString(JedisWrapper(data, getTimeMillis())))
     }
 
