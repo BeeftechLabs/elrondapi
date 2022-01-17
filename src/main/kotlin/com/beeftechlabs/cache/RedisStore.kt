@@ -8,6 +8,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import redis.clients.jedis.JedisPooled
+import redis.clients.jedis.params.SetParams
 import kotlin.time.Duration
 import kotlin.time.DurationUnit
 import kotlin.time.toDuration
@@ -33,7 +34,7 @@ object RedisStore {
             jedis.get(key)?.let { jsonValue ->
                 val (value, storedAt) = json.decodeFromString<JedisWrapper<T>>(jsonValue)
                 if ((getTimeMillis() - storedAt).toDuration(DurationUnit.MILLISECONDS) > ttl) {
-                    jedis.set(key, null)
+                    jedis.del(key)
                     null
                 } else {
                     value as? T
@@ -42,7 +43,7 @@ object RedisStore {
         }
     }
 
-    fun <T> peek(key: String, ttl: Duration): T? {
+    fun <T> peek(key: String): T? {
         return jedis?.let { jedis ->
             jedis.get(key)?.let { jsonValue ->
                 val (value, _) = json.decodeFromString<JedisWrapper<out Any>>(jsonValue)
@@ -51,8 +52,12 @@ object RedisStore {
         }
     }
 
-    inline fun <reified T> set(key: String, data: T?) {
-        jedis?.set(key, json.encodeToString(JedisWrapper(data, getTimeMillis())))
+    inline fun <reified T> set(key: String, data: T?, ttl: Duration) {
+        jedis?.set(
+            key,
+            json.encodeToString(JedisWrapper(data, getTimeMillis())),
+            SetParams.setParams().ex(ttl.inWholeSeconds)
+        )
     }
 
     @Serializable

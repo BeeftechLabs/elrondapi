@@ -13,18 +13,18 @@ inline fun <reified T> tryCache(key: String, ttl: Duration): T? {
 }
 
 inline fun <reified T> peekCache(type: CacheType): T? {
-    return InMemoryStore.peek(type.name, type.ttl) ?: RedisStore.peek(type.name, type.ttl)
+    return InMemoryStore.peek(type.name) ?: RedisStore.peek(type.name)
 }
 
-suspend inline fun <reified T> putInCache(key: String, data: T?) = coroutineScope {
-    launch(Dispatchers.IO) { RedisStore.set(key, data) }
+suspend inline fun <reified T> putInCache(key: String, data: T?, ttl: Duration) = coroutineScope {
+    launch(Dispatchers.IO) { RedisStore.set(key, data, ttl) }
     InMemoryStore.set(key, data)
 }
 
 suspend inline fun <reified T> withCache(type: CacheType, instance: String = "", producer: () -> T): T {
     val key = if (instance.isNotEmpty()) "${type.name}:$instance" else type.name
 
-    return tryCache(key, type.ttl) ?: producer().also { putInCache(key, it) }
+    return tryCache(key, type.ttl) ?: producer().also { putInCache(key, it, type.ttl) }
 }
 
 enum class CacheType(val ttl: Duration) {

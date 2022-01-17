@@ -20,7 +20,7 @@ object InMemoryStore {
         }
     }
 
-    fun <T> peek(key: String, ttl: Duration): T? {
+    fun <T> peek(key: String): T? {
         return store[key] as? T
     }
 
