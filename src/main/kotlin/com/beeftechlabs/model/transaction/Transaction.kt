@@ -31,7 +31,7 @@ data class Transaction(
 )
 
 fun ElasticTransaction.toTransaction(hash: String) = Transaction(
-    hash, sender, receiver, Value.extract(value, "EGLD"), Value.None, Value.None, data, nonce, gasLimit,
+    hash, sender, receiver, Value.extract(value, "EGLD"), Value.None, Value.None, data ?: "", nonce, gasLimit,
     gasPrice, gasUsed, Value.extract(fee, ""), timestamp, senderShard, receiverShard,
     tokens ?: emptyList(), esdtValues ?: emptyList(), status, TransactionType.Unknown, hasScResults,
     isScCall, emptyList()

@@ -8,7 +8,7 @@ data class ElasticTransaction(
     @JsonProperty("sender") val sender: String,
     @JsonProperty("receiver") val receiver: String,
     @JsonProperty("value") val value: String,
-    @JsonProperty("data") val data: String,
+    @JsonProperty("data") val data: String? = null,
     @JsonProperty("nonce") val nonce: Long,
     @JsonProperty("gasLimit") val gasLimit: Long,
     @JsonProperty("gasPrice") val gasPrice: Long,
