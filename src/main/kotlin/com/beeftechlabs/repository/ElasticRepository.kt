@@ -1,6 +1,7 @@
 package com.beeftechlabs.repository
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient
+import co.elastic.clients.elasticsearch._types.FieldValue
 import co.elastic.clients.elasticsearch._types.SortOrder
 import co.elastic.clients.elasticsearch.core.SearchRequest
 import co.elastic.clients.json.JsonData
@@ -8,8 +9,8 @@ import co.elastic.clients.json.jackson.JacksonJsonpMapper
 import co.elastic.clients.transport.rest_client.RestClientTransport
 import com.beeftechlabs.config
 import com.beeftechlabs.model.address.AddressDelegation
-import com.beeftechlabs.model.core.StakingProvider
 import com.beeftechlabs.model.core.Delegator
+import com.beeftechlabs.model.core.StakingProvider
 import com.beeftechlabs.model.elastic.ElasticDelegation
 import com.beeftechlabs.model.elastic.ElasticScResult
 import com.beeftechlabs.model.elastic.ElasticTransaction
@@ -18,7 +19,8 @@ import com.beeftechlabs.model.transaction.*
 import com.beeftechlabs.processing.TransactionProcessor
 import com.beeftechlabs.util.suspending
 import io.ktor.util.date.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.apache.http.HttpHost
 import org.apache.http.auth.AuthScope
 import org.apache.http.auth.UsernamePasswordCredentials
@@ -129,30 +131,9 @@ object ElasticRepository {
             hit.source()?.toTransaction(hit.id())
         }
 
-        println("Fetching transactions took ${getTimeMillis() - start} millis")
-
         val updatedTransactions = if (request.includeScResults || request.processTransactions) {
-            val startSc = getTimeMillis()
 
             var transactionsWithScResults = transactions
-
-//            val scResultsDeferred = transactions.filter { it.hasScResults }.map {
-//                coroutineScope { async { getScResultsForTransaction(it.hash) } }
-//            }
-//            val allScResults = scResultsDeferred.awaitAll()
-//
-//            allScResults.forEach { scResults ->
-//                if (scResults.isNotEmpty()) {
-//                    val hash = scResults.first().originalTxHash
-//                    transactionsWithScResults = transactionsWithScResults.map {
-//                        if (it.hash == hash) {
-//                            it.copy(scResults = scResults)
-//                        } else {
-//                            it
-//                        }
-//                    }
-//                }
-//            }
 
             val allScResults = getScResultsForTransactions(transactions.map { it.hash })
 
@@ -166,8 +147,6 @@ object ElasticRepository {
                 }
             }
 
-            println("Fetching scResults took ${getTimeMillis() - startSc} millis")
-
             transactionsWithScResults
         } else {
             transactions
@@ -176,9 +155,7 @@ object ElasticRepository {
         val processedTransactions = if (request.processTransactions) {
             withContext(Dispatchers.Default) {
                 val startProcess = getTimeMillis()
-                updatedTransactions.map { TransactionProcessor.process(request.address, it) }.also {
-                    println("Processing transactions took ${getTimeMillis() - startProcess} millis")
-                }
+                updatedTransactions.map { TransactionProcessor.process(request.address, it) }
             }
         } else {
             updatedTransactions
@@ -221,27 +198,17 @@ object ElasticRepository {
             .index("scresults")
             .query { q ->
                 q.bool { b ->
-                    b.must { m ->
-                        m.bool { builder ->
-                            hashes.drop(1).fold(
-                                builder.should { s ->
-                                    s.term { t ->
-                                        t.field("originalTxHash")
-                                            .value { v -> v.stringValue(hashes.first()) }
-                                    }
+                    b.filter { f ->
+                        f.terms { t ->
+                            t.field("originalTxHash")
+                                .terms { t2 ->
+                                    t2.value(hashes.map { FieldValue.of(it) })
                                 }
-                            ) { acc, hash ->
-                                acc.should { s ->
-                                    s.term { t ->
-                                        t.field("originalTxHash")
-                                            .value { v -> v.stringValue(hash) }
-                                    }
-                                }
-                            }
                         }
                     }
                 }
             }
+            .size(1000)
             .build()
 
         val response = esClient.search(searchRequest, ElasticScResult::class.java).suspending()
@@ -299,6 +266,6 @@ object ElasticRepository {
                     value = Value.extract(delegation.activeStake, "EGLD")
                 )
             }
-        }.also { println(it.size) }
+        }
     }
 }
