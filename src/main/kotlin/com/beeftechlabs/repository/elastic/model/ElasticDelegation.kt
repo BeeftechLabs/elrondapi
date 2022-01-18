@@ -1,4 +1,4 @@
-package com.beeftechlabs.model.elastic
+package com.beeftechlabs.repository.elastic.model
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty

@@ -1,4 +1,4 @@
-package com.beeftechlabs.repository
+package com.beeftechlabs.repository.elastic
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient
 import co.elastic.clients.elasticsearch._types.FieldValue
@@ -11,14 +11,16 @@ import com.beeftechlabs.config
 import com.beeftechlabs.model.address.AddressDelegation
 import com.beeftechlabs.model.core.Delegator
 import com.beeftechlabs.model.core.StakingProvider
-import com.beeftechlabs.model.elastic.ElasticDelegation
-import com.beeftechlabs.model.elastic.ElasticScResult
-import com.beeftechlabs.model.elastic.ElasticTransaction
+import com.beeftechlabs.model.token.TokenRequest
+import com.beeftechlabs.model.token.TokenResponse
 import com.beeftechlabs.model.token.Value
 import com.beeftechlabs.model.transaction.*
 import com.beeftechlabs.processing.TransactionProcessor
+import com.beeftechlabs.repository.elastic.model.ElasticDelegation
+import com.beeftechlabs.repository.elastic.model.ElasticScResult
+import com.beeftechlabs.repository.elastic.model.ElasticToken
+import com.beeftechlabs.repository.elastic.model.ElasticTransaction
 import com.beeftechlabs.util.suspending
-import io.ktor.util.date.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.apache.http.HttpHost
@@ -78,7 +80,6 @@ object ElasticRepository {
     }
 
     suspend fun getTransactions(request: TransactionsRequest): TransactionsResponse {
-        val start = getTimeMillis()
         val size = minOf(request.pageSize, config.maxPageSize)
         val searchRequest = SearchRequest.Builder()
             .index("transactions")
@@ -154,7 +155,6 @@ object ElasticRepository {
 
         val processedTransactions = if (request.processTransactions) {
             withContext(Dispatchers.Default) {
-                val startProcess = getTimeMillis()
                 updatedTransactions.map { TransactionProcessor.process(request.address, it) }
             }
         } else {
@@ -267,5 +267,47 @@ object ElasticRepository {
                 )
             }
         }
+    }
+
+    suspend fun getTokens(request: TokenRequest): TokenResponse {
+        val searchRequest = SearchRequest.Builder()
+            .index("tokens")
+            .query { q ->
+                q.bool { b ->
+                    b.apply {
+                        request.timestamp?.let {
+                            filter { f ->
+                                f.range { r ->
+                                    r.field("timestamp")
+                                        .apply {
+                                            if (request.newer) {
+                                                gte(JsonData.of(request.timestamp))
+                                            } else {
+                                                lte(JsonData.of(request.timestamp))
+                                            }
+                                        }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .size(request.size)
+            .sort { sort ->
+                sort.field { field ->
+                    field.field("timestamp")
+                        .order(if (request.newer) SortOrder.Desc else SortOrder.Asc)
+                }
+            }
+            .build()
+
+        val response = esClient.search(searchRequest, ElasticToken::class.java).suspending()
+        val tokens = response.hits().hits().mapNotNull { it.source() }
+
+        return TokenResponse(
+            tokens = tokens,
+            hasMore = tokens.size == request.size,
+            lastTimestamp = tokens.firstOrNull()?.timestamp
+        )
     }
 }

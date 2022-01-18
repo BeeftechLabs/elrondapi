@@ -26,5 +26,6 @@ data class Elrond(
 )
 
 data class Redis(
+    val enabled: Boolean,
     val url: String
 )

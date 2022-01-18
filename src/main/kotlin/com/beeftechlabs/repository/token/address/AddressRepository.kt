@@ -12,9 +12,17 @@ import kotlinx.coroutines.withContext
 
 object AddressRepository {
 
-    suspend fun getAddressDetails(address: String): AddressDetails = coroutineScope {
-        val tokens = async { TokenRepository.getTokensForAddress(address) }
-        val delegations = async { StakingRepository.getDelegations(address) }
+    suspend fun getAddressDetails(
+        address: String,
+        withDelegations: Boolean,
+        withTokens: Boolean,
+        withNfts: Boolean,
+        withSfts: Boolean
+    ): AddressDetails = coroutineScope {
+        val tokens = async { if (withTokens) TokenRepository.getTokensForAddress(address) else null }
+        val nfts = async { if (withNfts) TokenRepository.getNftsForAddress(address) else null }
+        val sfts = async { if (withSfts) TokenRepository.getSftsForAddress(address) else null }
+        val delegations = async { if (withDelegations) StakingRepository.getDelegations(address) else null }
         val account = withContext(Dispatchers.IO) { getAccountFromGateway(address) }
 
         AddressDetails(
@@ -24,6 +32,8 @@ object AddressRepository {
             herotag = account.username,
             ownerAddress = account.ownerAddress,
             tokens = tokens.await(),
+            nfts = nfts.await(),
+            sfts = sfts.await(),
             delegations = delegations.await()
         )
     }

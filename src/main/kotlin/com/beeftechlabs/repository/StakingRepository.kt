@@ -1,7 +1,6 @@
 package com.beeftechlabs.repository
 
 import com.beeftechlabs.cache.CacheType
-import com.beeftechlabs.cache.tryCache
 import com.beeftechlabs.cache.withCache
 import com.beeftechlabs.config
 import com.beeftechlabs.model.address.Address
@@ -11,6 +10,7 @@ import com.beeftechlabs.model.core.StakingProvider
 import com.beeftechlabs.model.network.NetworkConfig
 import com.beeftechlabs.model.network.NetworkStatus
 import com.beeftechlabs.model.token.Value
+import com.beeftechlabs.repository.elastic.ElasticRepository
 import com.beeftechlabs.repository.network.cached
 import com.beeftechlabs.service.SCService
 import com.beeftechlabs.util.*

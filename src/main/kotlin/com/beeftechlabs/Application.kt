@@ -1,6 +1,5 @@
 package com.beeftechlabs
 
-import com.beeftechlabs.cache.RedisStore
 import com.beeftechlabs.plugins.configureHTTP
 import com.beeftechlabs.plugins.configureMonitoring
 import com.beeftechlabs.plugins.configureRouting
@@ -18,8 +17,6 @@ val config = ConfigLoader().loadConfigOrThrow<Config>(
 )
 
 fun main() {
-    RedisStore.initialize()
-
     embeddedServer(Netty, port = config.port) {
         configureRouting()
         configureSerialization()

@@ -11,6 +11,8 @@ data class AddressDetails(
     val balance: Value,
     val herotag: String,
     val ownerAddress: String,
-    val tokens: List<Token>,
-    val delegations: List<AddressDelegation>
+    val tokens: List<Token>? = null,
+    val nfts: List<Token>? = null,
+    val sfts: List<Token>? = null,
+    val delegations: List<AddressDelegation>? = null
 )

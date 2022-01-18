@@ -15,18 +15,12 @@ import kotlin.time.toDuration
 
 object RedisStore {
 
-    var jedis: JedisPooled? = null
+    val jedis: JedisPooled? by lazy { if (config.redis?.enabled == true) JedisPooled(config.redis.url) else null }
 
     val json = Json {
         prettyPrint = true
         isLenient = true
         ignoreUnknownKeys = true
-    }
-
-    fun initialize() {
-        config.redis?.let { redisConfig ->
-            jedis = JedisPooled(redisConfig.url)
-        }
     }
 
     inline fun <reified T> get(key: String, ttl: Duration): T? {

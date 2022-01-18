@@ -5,11 +5,13 @@ import com.beeftechlabs.model.network.NetworkConfig
 import com.beeftechlabs.model.network.NetworkStatus
 import com.beeftechlabs.model.transaction.TransactionsRequest
 import com.beeftechlabs.processing.TransactionProcessor
-import com.beeftechlabs.repository.ElasticRepository
 import com.beeftechlabs.repository.Nodes
 import com.beeftechlabs.repository.StakingProviders
 import com.beeftechlabs.repository.TransactionRepository
+import com.beeftechlabs.repository.elastic.ElasticRepository
 import com.beeftechlabs.repository.network.cached
+import com.beeftechlabs.repository.token.AllNfts
+import com.beeftechlabs.repository.token.AllSfts
 import com.beeftechlabs.repository.token.AllTokens
 import com.beeftechlabs.repository.token.TokenRepository
 import com.beeftechlabs.repository.token.address.AddressRepository
@@ -41,6 +43,33 @@ fun Application.configureRouting() {
                 }
             }
 
+            get("/transactions/{address}") {
+                val address = call.parameters["address"]
+
+                if (address != null) {
+                    val request = TransactionsRequest(
+                        address = address
+                    ).let { default ->
+                        default.copy(
+                            pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull() ?: default.pageSize,
+                            startTimestamp = call.request.queryParameters["startTimestamp"]?.toLongOrNull()
+                                ?: default.startTimestamp,
+                            newer = call.request.queryParameters["newer"]?.toBooleanStrictOrNull() ?: default.newer,
+                            includeScResults = call.request.queryParameters["includeScResults"]?.toBooleanStrictOrNull()
+                                ?: default.includeScResults,
+                            processTransactions = call.request.queryParameters["processTransactions"]?.toBooleanStrictOrNull()
+                                ?: default.processTransactions
+                        )
+                    }
+
+                    withContext(Dispatchers.IO) {
+                        call.respond(TransactionRepository.getTransactions(request))
+                    }
+                } else {
+                    call.response.status(HttpStatusCode.BadRequest)
+                }
+            }
+
             get("/transaction/{hash}") {
                 val hash = call.parameters["hash"]
                 val process = call.request.queryParameters["process"]?.toBooleanStrictOrNull() ?: true
@@ -63,11 +92,23 @@ fun Application.configureRouting() {
         if (config.hasElrondConfig) {
             get("/address/{address}") {
                 val address = call.parameters["address"]
+                val withDelegations = call.request.queryParameters["withDelegations"]?.toBooleanStrictOrNull() ?: false
+                val withTokens = call.request.queryParameters["withTokens"]?.toBooleanStrictOrNull() ?: false
+                val withNfts = call.request.queryParameters["withNfts"]?.toBooleanStrictOrNull() ?: false
+                val withSfts = call.request.queryParameters["withSfts"]?.toBooleanStrictOrNull() ?: false
                 if (address.isNullOrEmpty()) {
                     call.response.status(HttpStatusCode.BadRequest)
                 } else {
                     withContext(Dispatchers.IO) {
-                        call.respond(AddressRepository.getAddressDetails(address))
+                        call.respond(
+                            AddressRepository.getAddressDetails(
+                                address,
+                                withDelegations,
+                                withTokens,
+                                withNfts,
+                                withSfts
+                            )
+                        )
                     }
                 }
             }
@@ -118,6 +159,40 @@ fun Application.configureRouting() {
                 } else {
                     withContext(Dispatchers.IO) {
                         call.respond(TokenRepository.getTokensForAddress(address))
+                    }
+                }
+            }
+
+            get("/nfts") {
+                withContext(Dispatchers.IO) {
+                    call.respond(AllNfts.cached().value)
+                }
+            }
+
+            get("/nfts/{address}") {
+                val address = call.parameters["address"]
+                if (address.isNullOrEmpty()) {
+                    call.response.status(HttpStatusCode.BadRequest)
+                } else {
+                    withContext(Dispatchers.IO) {
+                        call.respond(TokenRepository.getNftsForAddress(address))
+                    }
+                }
+            }
+
+            get("/sfts") {
+                withContext(Dispatchers.IO) {
+                    call.respond(AllSfts.cached().value)
+                }
+            }
+
+            get("/sfts/{address}") {
+                val address = call.parameters["address"]
+                if (address.isNullOrEmpty()) {
+                    call.response.status(HttpStatusCode.BadRequest)
+                } else {
+                    withContext(Dispatchers.IO) {
+                        call.respond(TokenRepository.getSftsForAddress(address))
                     }
                 }
             }

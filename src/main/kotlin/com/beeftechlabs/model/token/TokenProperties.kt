@@ -5,8 +5,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class TokenProperties(
     val identifier: String,
+    val collection: String?,
     val name: String,
-    val type: String,
+    val type: TokenType,
     val owner: String,
     val minted: String,
     val burnt: String,
@@ -22,5 +23,5 @@ data class TokenProperties(
     val canAddSpecialRoles: Boolean,
     val canTransferNFTCreateRole: Boolean,
     val nftCreateStopped: Boolean,
-    val wiped: String? = null
+    val wiped: String?
 )
