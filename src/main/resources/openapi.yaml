@@ -596,7 +596,7 @@ definitions:
       bigNumber:
         type: "string"
       denominated:
-        type: "string"
+        type: "double"
       token:
         type: "string"
 
@@ -677,6 +677,10 @@ definitions:
       stakingProvider:
         $ref: '#/definitions/StakingProvider'
       value:
+        $ref: '#/definitions/Value'
+      claimable:
+        $ref: '#/definitions/Value'
+      totalRewards:
         $ref: '#/definitions/Value'
       undelegatedList:
         type: "array"

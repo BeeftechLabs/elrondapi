@@ -8,6 +8,8 @@ import kotlinx.serialization.Serializable
 data class AddressDelegation(
     val stakingProvider: StakingProvider,
     val value: Value,
+    val claimable: Value,
+    val totalRewards: Value,
     val undelegatedList: List<UndelegatedValue> = emptyList()
 )
 

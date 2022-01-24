@@ -50,11 +50,37 @@ object StakingRepository {
                 }.associate { it.first to it.second.await() }
             }
 
+        val claimables =
+            withCache(CacheType.AddressClaimable, address) {
+                delegations.map {
+                    it.stakingProvider.address to async {
+                        getAddressClaimableForContract(
+                            address,
+                            it.stakingProvider.address
+                        )
+                    }
+                }.associate { it.first to it.second.await() }
+            }
+
+        val totalRewards =
+            withCache(CacheType.AddressTotalRewards, address) {
+                delegations.map {
+                    it.stakingProvider.address to async {
+                        getAddressTotalRewardsForContract(
+                            address,
+                            it.stakingProvider.address
+                        )
+                    }
+                }.associate { it.first to it.second.await() }
+            }
+
         delegations.map { delegation ->
             delegation.copy(
                 stakingProvider = providers.await().find { it.address == delegation.stakingProvider.address }
                     ?: delegation.stakingProvider,
-                undelegatedList = undelegations[delegation.stakingProvider.address] ?: emptyList()
+                undelegatedList = undelegations[delegation.stakingProvider.address] ?: emptyList(),
+                claimable = claimables[delegation.stakingProvider.address] ?: Value.zeroEgld(),
+                totalRewards = totalRewards[delegation.stakingProvider.address] ?: Value.zeroEgld()
             )
         }
     }
@@ -145,12 +171,32 @@ object StakingRepository {
         }
     }
 
+    private suspend fun getAddressClaimableForContract(
+        address: String,
+        contract: String
+    ): Value {
+        val response = SCService.vmQuery(contract, "getClaimableRewards", listOf(Address(address).hex))
+
+        return response.firstOrNull()?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
+            ?: Value.zeroEgld()
+    }
+
+    private suspend fun getAddressTotalRewardsForContract(
+        address: String,
+        contract: String
+    ): Value {
+        val response = SCService.vmQuery(contract, "getTotalCumulatedRewardsForUser", listOf(Address(address).hex))
+
+        return response.firstOrNull()?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
+            ?: Value.zeroEgld()
+    }
+
     suspend fun getStaked(address: String): Pair<Value?, List<Unstaked>> = coroutineScope {
         val addressHex = Address(address).hex
         val stakedResponse = async { SCService.vmQuery(elrondConfig.auction, "getTotalStaked", listOf(addressHex)) }
         val unstakedResponse = async { SCService.vmQuery(elrondConfig.auction, "getUnStakedTokensList", listOf(addressHex)) }
 
-        val staked = stakedResponse.await().firstOrNull()?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") } ?: Value.zero("EGLD")
+        val staked = stakedResponse.await().firstOrNull()?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") } ?: Value.zeroEgld()
         val unstaked = unstakedResponse.await()
             .chunked(2).map { (value, epochsRemaining) ->
                 Unstaked(

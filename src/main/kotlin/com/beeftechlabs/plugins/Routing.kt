@@ -114,6 +114,16 @@ fun Application.configureRouting() {
                     }
                 }
             }
+            get("/address/{address}/balance") {
+                val address = call.parameters["address"]
+                if (address.isNullOrEmpty()) {
+                    call.response.status(HttpStatusCode.BadRequest)
+                } else {
+                    withContext(Dispatchers.IO) {
+                        call.respond(AddressRepository.getAddressBalance(address))
+                    }
+                }
+            }
 
             get("/network/config") {
                 call.respond(NetworkConfig.cached())

@@ -237,7 +237,9 @@ object ElasticRepository {
             hit.source()?.let { delegation ->
                 AddressDelegation(
                     stakingProvider = StakingProvider(address = delegation.contract, ""),
-                    value = Value.extract(delegation.activeStake, "EGLD")
+                    value = Value.extract(delegation.activeStake, "EGLD"),
+                    claimable = Value.None,
+                    totalRewards = Value.None
                 )
             }
         }

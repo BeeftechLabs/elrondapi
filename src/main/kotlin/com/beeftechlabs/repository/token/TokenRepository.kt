@@ -91,8 +91,6 @@ object TokenRepository {
         val esdts = esdtsDeferred.await()
         val nfts = nftsDeferred.await().value.associateBy { it.identifier }
 
-        println(esdts)
-
         esdts.mapNotNull { esdt ->
             val identifierParts = esdt.tokenIdentifier.split("-")
             val commonIdentifier = identifierParts.take(2).joinToString("-")
@@ -113,8 +111,6 @@ object TokenRepository {
 
         val esdts = esdtsDeferred.await()
         val sfts = sftsDeferred.await().value.associateBy { it.identifier }
-
-        println(esdts)
 
         esdts.mapNotNull { esdt ->
             val identifierParts = esdt.tokenIdentifier.split("-")

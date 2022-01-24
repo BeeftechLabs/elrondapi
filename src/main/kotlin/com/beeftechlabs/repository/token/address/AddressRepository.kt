@@ -45,6 +45,11 @@ object AddressRepository {
         )
     }
 
+    suspend fun getAddressBalance(address: String): Value = Value.extract(
+        getAccountFromGateway(address).balance,
+        "EGLD"
+    )
+
     private suspend fun getAccountFromGateway(address: String): Account =
         GatewayService.get<GetAccountResponse>("address/$address").data.account
 }
