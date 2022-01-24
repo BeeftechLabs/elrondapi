@@ -7,6 +7,7 @@ import com.beeftechlabs.model.address.Address
 import com.beeftechlabs.model.address.AddressDelegation
 import com.beeftechlabs.model.address.UndelegatedValue
 import com.beeftechlabs.model.core.StakingProvider
+import com.beeftechlabs.model.core.Unstaked
 import com.beeftechlabs.model.network.NetworkConfig
 import com.beeftechlabs.model.network.NetworkStatus
 import com.beeftechlabs.model.token.Value
@@ -132,7 +133,7 @@ object StakingRepository {
 
         val roundsRemaining by lazy { networkConfig.roundsPerEpoch - networkStatus.roundsPassedInCurrentEpoch }
 
-        return response.zipWithNext().map { (valueBase64, epochsRemainingBase64) ->
+        return response.chunked(2).map { (valueBase64, epochsRemainingBase64) ->
             val roundsUntilComplete =
                 ((epochsRemainingBase64.vmQueryToLong() - 1) * networkConfig.roundsPerEpoch) + roundsRemaining
             val timeLeft = roundsUntilComplete * networkConfig.roundDuration
@@ -142,6 +143,23 @@ object StakingRepository {
                 timeLeft.coerceAtLeast(0)
             )
         }
+    }
+
+    suspend fun getStaked(address: String): Pair<Value?, List<Unstaked>> = coroutineScope {
+        val addressHex = Address(address).hex
+        val stakedResponse = async { SCService.vmQuery(elrondConfig.auction, "getTotalStaked", listOf(addressHex)) }
+        val unstakedResponse = async { SCService.vmQuery(elrondConfig.auction, "getUnStakedTokensList", listOf(addressHex)) }
+
+        val staked = stakedResponse.await().firstOrNull()?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") } ?: Value.zero("EGLD")
+        val unstaked = unstakedResponse.await()
+            .chunked(2).map { (value, epochsRemaining) ->
+                Unstaked(
+                    Value.extractHex(value.fromBase64ToHexString(), "EGLD"),
+                    epochsRemaining.fromBase64ToHexString().takeIf { it.isNotEmpty() }
+                        ?.toBigInteger(16)?.intValue() ?: 0
+                )
+            }
+        Pair(staked, unstaked)
     }
 
     private const val NUM_PARALLEL_PROVIDER_FETCH = 100

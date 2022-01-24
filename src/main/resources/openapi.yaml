@@ -664,6 +664,12 @@ definitions:
         type: "array"
         items:
           $ref: '#/definitions/AddressDelegation'
+      staked:
+        $ref: '#/definitions/Value'
+      unstaked:
+        type: "array"
+        items:
+          $ref: '#/definitions/Unstaked'
 
   AddressDelegation:
     type: "object"
@@ -865,4 +871,12 @@ definitions:
       roundsPassedInCurrentEpoch:
         type: "integer"
       roundsPerEpoch:
+        type: "integer"
+
+  Unstaked:
+    type: "object"
+    properties:
+      value:
+        $ref: '#/definitions/Value'
+      epochsRemaining:
         type: "integer"

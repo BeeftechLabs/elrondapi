@@ -17,13 +17,18 @@ object AddressRepository {
         withDelegations: Boolean,
         withTokens: Boolean,
         withNfts: Boolean,
-        withSfts: Boolean
+        withSfts: Boolean,
+        withStake: Boolean
     ): AddressDetails = coroutineScope {
         val tokens = async { if (withTokens) TokenRepository.getTokensForAddress(address) else null }
         val nfts = async { if (withNfts) TokenRepository.getNftsForAddress(address) else null }
         val sfts = async { if (withSfts) TokenRepository.getSftsForAddress(address) else null }
         val delegations = async { if (withDelegations) StakingRepository.getDelegations(address) else null }
+        val staked = async { if (withStake) StakingRepository.getStaked(address) else null }
         val account = withContext(Dispatchers.IO) { getAccountFromGateway(address) }
+
+        val totalStaked = staked.await()?.first
+        val unstaked = staked.await()?.second
 
         AddressDetails(
             address = address,
@@ -34,7 +39,9 @@ object AddressRepository {
             tokens = tokens.await(),
             nfts = nfts.await(),
             sfts = sfts.await(),
-            delegations = delegations.await()
+            delegations = delegations.await(),
+            staked = totalStaked,
+            unstaked = unstaked
         )
     }
 

@@ -96,6 +96,7 @@ fun Application.configureRouting() {
                 val withTokens = call.request.queryParameters["withTokens"]?.toBooleanStrictOrNull() ?: false
                 val withNfts = call.request.queryParameters["withNfts"]?.toBooleanStrictOrNull() ?: false
                 val withSfts = call.request.queryParameters["withSfts"]?.toBooleanStrictOrNull() ?: false
+                val withStake = call.request.queryParameters["withStake"]?.toBooleanStrictOrNull() ?: false
                 if (address.isNullOrEmpty()) {
                     call.response.status(HttpStatusCode.BadRequest)
                 } else {
@@ -106,7 +107,8 @@ fun Application.configureRouting() {
                                 withDelegations,
                                 withTokens,
                                 withNfts,
-                                withSfts
+                                withSfts,
+                                withStake
                             )
                         )
                     }
