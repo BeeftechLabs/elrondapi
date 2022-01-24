@@ -671,7 +671,8 @@ definitions:
       bigNumber:
         type: "string"
       denominated:
-        type: "double"
+        type: "number"
+        format: "double"
       token:
         type: "string"
 
@@ -887,7 +888,8 @@ definitions:
       gasPerDataByte:
         type: "integer"
       gasPriceModifier:
-        type: "double"
+        type: "number"
+        format: "double"
       latestTagSoftwareVersion:
         type: "string"
       maxGasPerTransaction:
@@ -921,7 +923,8 @@ definitions:
         type: "integer"
         format: "int64"
       topUpFactor:
-        type: "double"
+        type: "number"
+        format: "double"
 
   NetworkStatus:
     type: "object"
