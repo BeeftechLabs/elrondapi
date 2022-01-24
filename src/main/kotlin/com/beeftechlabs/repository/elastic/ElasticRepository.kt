@@ -15,6 +15,8 @@ import com.beeftechlabs.model.token.TokenRequest
 import com.beeftechlabs.model.token.TokenResponse
 import com.beeftechlabs.model.token.Value
 import com.beeftechlabs.model.transaction.*
+import com.beeftechlabs.plugins.endCustomTrace
+import com.beeftechlabs.plugins.startCustomTrace
 import com.beeftechlabs.processing.TransactionProcessor
 import com.beeftechlabs.repository.elastic.model.ElasticDelegation
 import com.beeftechlabs.repository.elastic.model.ElasticScResult
@@ -52,6 +54,7 @@ object ElasticRepository {
     private val esClient by lazy { ElasticsearchAsyncClient(transport) }
 
     suspend fun getTransaction(hash: String, process: Boolean): Transaction? {
+        startCustomTrace("GetSingleTransactionFromElastic:$hash")
         val searchRequest = SearchRequest.Builder()
             .index("transactions")
             .query { q ->
@@ -72,9 +75,13 @@ object ElasticRepository {
                 ?.let { (hash, et) ->
                     et.toTransaction(hash)
                 }
+        endCustomTrace("GetSingleTransactionFromElastic:$hash")
 
         if (transaction != null && process) {
-            return transaction.copy(scResults = getScResultsForTransaction(hash))
+            startCustomTrace("GetSingleTransactionScResultsFromElastic:$hash")
+            return transaction.copy(scResults = getScResultsForTransaction(hash)).also {
+                endCustomTrace("GetSingleTransactionScResultsFromElastic:$hash")
+            }
         }
         return transaction
     }

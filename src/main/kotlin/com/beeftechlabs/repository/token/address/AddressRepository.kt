@@ -1,6 +1,7 @@
 package com.beeftechlabs.repository.token.address
 
 import com.beeftechlabs.model.address.AddressDetails
+import com.beeftechlabs.model.core.LongValue
 import com.beeftechlabs.model.token.Value
 import com.beeftechlabs.repository.StakingRepository
 import com.beeftechlabs.repository.token.TokenRepository
@@ -49,6 +50,9 @@ object AddressRepository {
         getAccountFromGateway(address).balance,
         "EGLD"
     )
+
+    suspend fun getAddressNonce(address: String): LongValue =
+        LongValue(getAccountFromGateway(address).nonce)
 
     private suspend fun getAccountFromGateway(address: String): Account =
         GatewayService.get<GetAccountResponse>("address/$address").data.account

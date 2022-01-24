@@ -3,11 +3,11 @@ package com.beeftechlabs.plugins
 import com.beeftechlabs.config
 import com.beeftechlabs.model.network.NetworkConfig
 import com.beeftechlabs.model.network.NetworkStatus
+import com.beeftechlabs.model.transaction.NewTransaction
 import com.beeftechlabs.model.transaction.TransactionsRequest
 import com.beeftechlabs.processing.TransactionProcessor
 import com.beeftechlabs.repository.Nodes
 import com.beeftechlabs.repository.StakingProviders
-import com.beeftechlabs.repository.TransactionRepository
 import com.beeftechlabs.repository.elastic.ElasticRepository
 import com.beeftechlabs.repository.network.cached
 import com.beeftechlabs.repository.token.AllNfts
@@ -15,6 +15,7 @@ import com.beeftechlabs.repository.token.AllSfts
 import com.beeftechlabs.repository.token.AllTokens
 import com.beeftechlabs.repository.token.TokenRepository
 import com.beeftechlabs.repository.token.address.AddressRepository
+import com.beeftechlabs.repository.transaction.TransactionRepository
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.http.content.*
@@ -71,25 +72,39 @@ fun Application.configureRouting() {
             }
 
             get("/transaction/{hash}") {
+                startCallTrace()
+
                 val hash = call.parameters["hash"]
-                val process = call.request.queryParameters["process"]?.toBooleanStrictOrNull() ?: true
+                val process = call.request.queryParameters["process"]?.toBooleanStrictOrNull() ?: false
                 if (hash.isNullOrEmpty()) {
                     call.response.status(HttpStatusCode.BadRequest)
                 } else {
                     TransactionRepository.getTransaction(hash, process)?.let { transaction ->
                         if (process) {
                             withContext(Dispatchers.Default) {
-                                call.respond(TransactionProcessor.process(transaction.sender, transaction))
+                                startCustomTrace("ProcessSingleTransaction:$hash")
+                                call.respond(
+                                    TransactionProcessor.process(transaction.sender, transaction).also {
+                                        endCustomTrace("ProcessSingleTransaction:$hash")
+                                    }
+                                )
                             }
                         } else {
                             call.respond(transaction)
                         }
                     } ?: call.response.status(HttpStatusCode.BadRequest)
                 }
+
+                endCallTrace()
             }
         }
 
         if (config.hasElrondConfig) {
+            post("/transaction") {
+                val newTransaction = call.receive<NewTransaction>()
+                call.respond(TransactionRepository.sendTransaction(newTransaction))
+            }
+
             get("/address/{address}") {
                 val address = call.parameters["address"]
                 val withDelegations = call.request.queryParameters["withDelegations"]?.toBooleanStrictOrNull() ?: false
@@ -114,6 +129,7 @@ fun Application.configureRouting() {
                     }
                 }
             }
+
             get("/address/{address}/balance") {
                 val address = call.parameters["address"]
                 if (address.isNullOrEmpty()) {
@@ -121,6 +137,17 @@ fun Application.configureRouting() {
                 } else {
                     withContext(Dispatchers.IO) {
                         call.respond(AddressRepository.getAddressBalance(address))
+                    }
+                }
+            }
+
+            get("/address/{address}/nonce") {
+                val address = call.parameters["address"]
+                if (address.isNullOrEmpty()) {
+                    call.response.status(HttpStatusCode.BadRequest)
+                } else {
+                    withContext(Dispatchers.IO) {
+                        call.respond(AddressRepository.getAddressNonce(address))
                     }
                 }
             }

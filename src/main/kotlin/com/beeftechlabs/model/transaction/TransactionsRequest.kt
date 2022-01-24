@@ -9,5 +9,5 @@ data class TransactionsRequest(
     val startTimestamp: Long = 0,
     val newer: Boolean = true,
     val includeScResults: Boolean = false,
-    val processTransactions: Boolean = true
+    val processTransactions: Boolean = false
 )

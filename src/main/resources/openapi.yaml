@@ -202,6 +202,31 @@ paths:
             type: "array"
             items:
               $ref: "#/definitions/TransactionsResponse"
+  /transaction:
+    post:
+      tags:
+        - "transaction"
+      summary: "Create Transaction"
+      description: "Create a new Transaction"
+      operationId: "postTransaction"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "New Transaction"
+          required: true
+          schema:
+            $ref: '#/definitions/NewTransaction'
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/NewTransactionState"
 
   /address/{address}:
     get:
@@ -251,6 +276,56 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/AddressDetails"
+
+  /address/{address}/balance:
+    get:
+      tags:
+        - "address"
+      summary: "Address Balance"
+      description: "Get an Address' Balance in EGLD. Returns a Value object."
+      operationId: "getAddressBalance"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "address"
+          type: "string"
+          description: "Address in erd format"
+          required: true
+      responses:
+        "400":
+          description: "Invalid address"
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Value"
+
+  /address/{address}/nonce:
+    get:
+      tags:
+        - "address"
+      summary: "Address Nonce"
+      description: "Get an Address' current Nonce. Returns a LongValue object."
+      operationId: "getAddressNonce"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "address"
+          type: "string"
+          description: "Address in erd format"
+          required: true
+      responses:
+        "400":
+          description: "Invalid address"
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/LongValue"
 
   /nodes:
     get:
@@ -884,3 +959,57 @@ definitions:
         $ref: '#/definitions/Value'
       epochsRemaining:
         type: "integer"
+
+  NewTransaction:
+    type: "object"
+    properties:
+      chainId:
+        type: "string"
+      data:
+        type: "string"
+      gasLimit:
+        type: "integer"
+        format: "int64"
+      gasPrice:
+        type: "integer"
+        format: "int64"
+      nonce:
+        type: "integer"
+        format: "int64"
+      receiver:
+        type: "string"
+      sender:
+        type: "string"
+      signature:
+        type: "string"
+      value:
+        type: "string"
+      version:
+        type: "integer"
+
+  NewTransactionState:
+    type: "object"
+    properties:
+      hash:
+        type: "string"
+      receiverShard:
+        type: "integer"
+        format: "int64"
+      senderShard:
+        type: "integer"
+        format: "int64"
+      status:
+        $ref: '#/definitions/NewTransactionStatus'
+      error:
+        type: "string"
+
+  NewTransactionStatus:
+    type: "string"
+    enum: [ Pending, Failed ]
+
+  LongValue:
+    type: "object"
+    properties:
+      value:
+        type: "integer"
+        format: "int64"

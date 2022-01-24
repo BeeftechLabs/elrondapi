@@ -11,7 +11,7 @@ import com.beeftechlabs.util.tokenFromArg
 object TransactionProcessor {
 
     fun process(referenceAddress: String, transaction: Transaction): Transaction {
-        return if (!transaction.hasScResults) {
+        return if (!transaction.isScCall) {
             if (transaction.sender == referenceAddress) {
                 transaction.copy(type = TransactionType.Send)
             } else {
@@ -20,6 +20,7 @@ object TransactionProcessor {
         } else {
             val data = transaction.data.fromBase64String()
             val args = data.split("@")
+
             args.firstOrNull()?.let { function ->
                 when (function) {
                     "ESDTTransfer" -> parseESDTTransfer(referenceAddress, transaction, args)

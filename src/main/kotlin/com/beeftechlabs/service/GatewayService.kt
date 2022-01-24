@@ -17,6 +17,11 @@ object GatewayService {
         url("${elrondConfig.proxy}/$path")
     }.body()
 
+    suspend inline fun <reified T> post(path: String, request: Any): T = client.post {
+        url("${elrondConfig.proxy}/$path")
+        setBody(request)
+    }.body()
+
     suspend fun vmQuery(scQueryRequest: ScQueryRequest): ScQueryResponse =
         client.post {
             url("${elrondConfig.proxy}/vm-values/query")

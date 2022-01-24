@@ -5,7 +5,8 @@ data class Config(
     val elastic: Elastic?,
     val maxPageSize: Int,
     val elrond: Elrond?,
-    val redis: Redis?
+    val redis: Redis?,
+    val traceCalls: Boolean = false
 ) {
     val hasElastic = elastic != null
     val hasElrondConfig = elrond != null
