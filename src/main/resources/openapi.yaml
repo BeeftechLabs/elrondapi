@@ -9,8 +9,8 @@ info:
     url: 'https://partnerstaking.com/images/logo.png'
     altText: PartnerStaking
   license:
-    name: "Apache 2.0"
-    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+    name: "GNU General Public License v3.0"
+    url: "https://github.com/BeeftechLabs/elrondapi/blob/main/LICENSE"
 
 servers:
   - url: //api.partnerstaking.com
