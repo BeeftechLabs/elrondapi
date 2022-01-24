@@ -9,7 +9,7 @@ import kotlin.time.Duration.Companion.minutes
 
 inline fun <reified T> tryCache(key: String, ttl: Duration): T? {
     return InMemoryStore.get(key, ttl)
-        ?: RedisStore.get<T?>(key, ttl)?.also { InMemoryStore.set(key, it) }
+        ?: RedisStore.get<T?>(key)?.also { InMemoryStore.set(key, it) }
 }
 
 inline fun <reified T> peekCache(type: CacheType): T? {
