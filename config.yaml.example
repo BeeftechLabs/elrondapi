@@ -1,0 +1,19 @@
+port: 8080
+maxPageSize: 100
+traceCalls: false
+
+elastic:
+  url: ELASTIC_HOST
+  username: ELASTIC_USERNAME
+  password: ELASTIC_PASSWORD
+
+elrond:
+  proxy: ELROND_PROXY_HOST
+  delegationManager: erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqylllslmq6y6
+  staking: erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqllls0lczs7
+  auction: erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqplllst77y4l
+  esdt: erd1qqqqqqqqqqqqqqqpqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqzllls8a5w6u
+
+redis:
+  enabled: true
+  url: REDIS_HOST
