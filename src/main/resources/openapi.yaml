@@ -10,7 +10,7 @@ info:
     altText: PartnerStaking
   license:
     name: "GNU General Public License v3.0"
-    url: "https://github.com/BeeftechLabs/elrondapi/blob/main/LICENSE"
+    url: "https://www.gnu.org/licenses/gpl-3.0.en.html"
 
 servers:
   - url: //api.partnerstaking.com
