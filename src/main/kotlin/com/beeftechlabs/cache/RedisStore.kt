@@ -23,8 +23,7 @@ object RedisStore {
             jedis.get(key)?.let { jsonValue ->
                 try {
                     json.decodeFromString<T>(jsonValue)
-                }
-                catch (exception: Exception) {
+                } catch (exception: Exception) {
                     println("Error reading $key: $exception")
                     println("Had in store: $jsonValue")
                     null
@@ -38,8 +37,7 @@ object RedisStore {
             jedis.get(key)?.let { jsonValue ->
                 try {
                     json.decodeFromString<T>(jsonValue)
-                }
-                catch (exception: Exception) {
+                } catch (exception: Exception) {
                     println("Error reading $key: $exception")
                     println("Had in store: $jsonValue")
                     null
