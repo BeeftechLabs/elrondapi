@@ -6,14 +6,13 @@ import co.elastic.clients.elasticsearch._types.SortOrder
 import co.elastic.clients.elasticsearch._types.Time
 import co.elastic.clients.elasticsearch.core.OpenPointInTimeRequest
 import co.elastic.clients.elasticsearch.core.SearchRequest
-import co.elastic.clients.elasticsearch.core.search.TrackHits
 import co.elastic.clients.json.JsonData
 import co.elastic.clients.json.jackson.JacksonJsonpMapper
 import co.elastic.clients.transport.rest_client.RestClientTransport
 import com.beeftechlabs.config
 import com.beeftechlabs.model.address.AddressDelegation
-import com.beeftechlabs.model.address.AddressDetails
 import com.beeftechlabs.model.address.AddressesResponse
+import com.beeftechlabs.model.address.SimpleAddressDetails
 import com.beeftechlabs.model.core.Delegator
 import com.beeftechlabs.model.core.StakingProvider
 import com.beeftechlabs.model.token.TokenRequest
@@ -327,7 +326,7 @@ object ElasticRepository {
         sort: AddressSort,
         filter: String?,
         requestId: String?,
-        lastResult: String?
+        startingWith: String?
     ): AddressesResponse {
         val pitId = requestId ?: createPit("accounts")
 
@@ -362,8 +361,8 @@ object ElasticRepository {
             }
 //            .trackTotalHits(TrackHits.Builder().enabled(false).build())
             .apply {
-                if (lastResult != null) {
-                    searchAfter(lastResult)
+                if (startingWith != null) {
+                    searchAfter(startingWith)
                 }
             }
             .build()
@@ -371,22 +370,36 @@ object ElasticRepository {
         val response = esClient.search(searchRequest, ElasticAddress::class.java).suspending()
         val addresses = response.hits().hits().mapNotNull { it.source() }
 
-        val newLastResult = when (sort) {
-            AddressSort.AddressAsc, AddressSort.AddressDesc -> addresses.last().address
-            AddressSort.BalanceAsc, AddressSort.BalanceDesc -> addresses.last().balanceNum.toString()
-        }
+        if (addresses.isNotEmpty()) {
 
-        return AddressesResponse(
-            addresses = addresses.map {
-                AddressDetails(
-                    address = it.address,
-                    balance = Value(it.balance, it.balanceNum, "EGLD")
-                )
-            },
-            hasMore = addresses.size == NUM_ADDRESSES_PER_PAGE,
-            requestId = response.pitId() ?: pitId,
-            lastResult = newLastResult
-        )
+            val firstResult = when (sort) {
+                AddressSort.AddressAsc, AddressSort.AddressDesc -> addresses.first().address
+                AddressSort.BalanceAsc, AddressSort.BalanceDesc -> addresses.first().balanceNum.toString()
+            }
+
+            val lastResult = when (sort) {
+                AddressSort.AddressAsc, AddressSort.AddressDesc -> addresses.last().address
+                AddressSort.BalanceAsc, AddressSort.BalanceDesc -> addresses.last().balanceNum.toString()
+            }
+
+            return AddressesResponse(
+                addresses = addresses.map {
+                    SimpleAddressDetails(
+                        address = it.address,
+                        balance = Value(it.balance, it.balanceNum, "EGLD")
+                    )
+                },
+                hasMore = addresses.size == NUM_ADDRESSES_PER_PAGE,
+                requestId = response.pitId() ?: pitId,
+                firstResult = firstResult,
+                lastResult = lastResult
+            )
+        } else {
+            return AddressesResponse(
+                hasMore = false,
+                addresses = emptyList()
+            )
+        }
     }
 
     private suspend fun createPit(index: String, keepAlive: Time = DEFAULT_PIT_LENGTH): String =

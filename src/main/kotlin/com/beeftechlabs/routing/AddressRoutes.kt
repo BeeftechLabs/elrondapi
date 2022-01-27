@@ -18,10 +18,10 @@ fun Routing.addressRoutes() {
                     ?: AddressSort.AddressAsc
             val filter = call.request.queryParameters["filter"]
             val requestId = call.request.queryParameters["requestId"]
-            val lastResult = call.request.queryParameters["lastResult"]
+            val startingWith = call.request.queryParameters["startingWith"]
 
             withContext(Dispatchers.IO) {
-                call.respond(AddressRepository.getAddresses(sort, filter, requestId, lastResult))
+                call.respond(AddressRepository.getAddresses(sort, filter, requestId, startingWith))
             }
         }
 

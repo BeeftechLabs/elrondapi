@@ -254,12 +254,12 @@ paths:
         - in: "query"
           name: "requestId"
           type: "string"
-          description: "String received from the previous query. Needed to continue pagination."
+          description: "String received from the previous query. Add it to the next request to continue pagination."
           required: false
         - in: "query"
-          name: "lastResult"
+          name: "startingWith"
           type: "string"
-          description: "String received from the previous query. Needed to continue pagination."
+          description: "Your previous query contained firstResult and lastResult. Add lastResult as startingWith to the next request to continue pagination, or change to firstResult and reverse sort order if need to go to previous page (and it wasn't cached)."
           required: false
       responses:
         "200":
@@ -793,12 +793,22 @@ definitions:
         type: "boolean"
       requestId:
         type: "string"
+      firstResult:
+        type: "string"
       lastResult:
         type: "string"
       addresses:
         type: "array"
         items:
-          $ref: '#/definitions/AddressDetails'
+          $ref: '#/definitions/SimpleAddressDetails'
+
+  SimpleAddressDetails:
+    type: "object"
+    properties:
+      address:
+        type: "string"
+      balance:
+        $ref: '#/definitions/Value'
 
   AddressDelegation:
     type: "object"
