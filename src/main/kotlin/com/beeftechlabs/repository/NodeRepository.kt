@@ -65,7 +65,7 @@ object NodeRepository {
             bls to Address(owner.fromBase64ToHexString()).erd
         }
 
-    private const val NUM_PARALLEL_OWNER_FETCH = 200
+    private const val NUM_PARALLEL_OWNER_FETCH = 50
 }
 
 @Serializable

@@ -1,4 +1,4 @@
-package com.beeftechlabs.repository.token.address
+package com.beeftechlabs.repository.address.model
 
 import kotlinx.serialization.Serializable
 

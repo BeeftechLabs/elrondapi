@@ -8,7 +8,7 @@ import io.ktor.server.request.*
 
 fun Application.configureMonitoring() {
     install(CallLogging) {
-        level = if (config.traceCalls) Level.TRACE else Level.INFO
+        level = if (config.traceCalls) Level.TRACE else Level.ERROR
         filter { call -> call.request.path().startsWith("/") }
     }
 

@@ -208,7 +208,7 @@ object StakingRepository {
         Pair(staked, unstaked)
     }
 
-    private const val NUM_PARALLEL_PROVIDER_FETCH = 100
+    private const val NUM_PARALLEL_PROVIDER_FETCH = 50
 }
 
 @Serializable

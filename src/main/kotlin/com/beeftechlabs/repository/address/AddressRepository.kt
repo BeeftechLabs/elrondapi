@@ -1,9 +1,14 @@
-package com.beeftechlabs.repository.token.address
+package com.beeftechlabs.repository.address
 
 import com.beeftechlabs.model.address.AddressDetails
+import com.beeftechlabs.model.address.AddressesResponse
 import com.beeftechlabs.model.core.LongValue
 import com.beeftechlabs.model.token.Value
 import com.beeftechlabs.repository.StakingRepository
+import com.beeftechlabs.repository.address.model.Account
+import com.beeftechlabs.repository.address.model.AddressSort
+import com.beeftechlabs.repository.address.model.GetAccountResponse
+import com.beeftechlabs.repository.elastic.ElasticRepository
 import com.beeftechlabs.repository.token.TokenRepository
 import com.beeftechlabs.service.GatewayService
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +58,14 @@ object AddressRepository {
 
     suspend fun getAddressNonce(address: String): LongValue =
         LongValue(getAccountFromGateway(address).nonce)
+
+    suspend fun getAddresses(
+        sort: AddressSort,
+        filter: String?,
+        requestId: String?,
+        lastResult: String?
+    ): AddressesResponse =
+        ElasticRepository.getAddressesPaged(sort, filter, requestId, lastResult)
 
     private suspend fun getAccountFromGateway(address: String): Account =
         GatewayService.get<GetAccountResponse>("address/$address").data.account
