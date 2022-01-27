@@ -11,6 +11,8 @@ import com.beeftechlabs.model.core.Unstaked
 import com.beeftechlabs.model.network.NetworkConfig
 import com.beeftechlabs.model.network.NetworkStatus
 import com.beeftechlabs.model.token.Value
+import com.beeftechlabs.plugins.endCustomTrace
+import com.beeftechlabs.plugins.startCustomTrace
 import com.beeftechlabs.repository.elastic.ElasticRepository
 import com.beeftechlabs.repository.network.cached
 import com.beeftechlabs.service.SCService
@@ -25,6 +27,7 @@ object StakingRepository {
     private val elrondConfig by lazy { config.elrond!! }
 
     suspend fun getDelegations(address: String): List<AddressDelegation> = coroutineScope {
+        startCustomTrace("GetDelegations:$address")
         val providers = async { StakingProviders.cached().value }
         val delegationsDeferred = async {
             withCache(CacheType.AddressDelegations, address) {
@@ -83,9 +86,12 @@ object StakingRepository {
                 totalRewards = totalRewards[delegation.stakingProvider.address] ?: Value.zeroEgld()
             )
         }
+    }.also {
+        endCustomTrace("GetDelegations:$address")
     }
 
-    suspend fun getDelegationProviders(): StakingProviders {
+    suspend fun getStakingProviders(): StakingProviders {
+        startCustomTrace("GetStakingProviders")
         val providerAddresses =
             SCService.vmQuery(elrondConfig.delegationManager, "getAllContractAddresses").map {
                 Address(it.fromBase64ToHexString()).erd
@@ -99,7 +105,9 @@ object StakingRepository {
                     }
                     .flatten().mapNotNull { it }
             }
-        )
+        ).also {
+            endCustomTrace("GetStakingProviders")
+        }
     }
 
     private suspend fun getProviderDetails(address: String): StakingProvider? = coroutineScope {
@@ -208,7 +216,7 @@ object StakingRepository {
         Pair(staked, unstaked)
     }
 
-    private const val NUM_PARALLEL_PROVIDER_FETCH = 50
+    private const val NUM_PARALLEL_PROVIDER_FETCH = 100
 }
 
 @Serializable
@@ -216,6 +224,6 @@ data class StakingProviders(
     val value: List<StakingProvider>
 ) {
     companion object {
-        suspend fun cached() = withCache(CacheType.StakingProviders) { StakingRepository.getDelegationProviders() }
+        suspend fun cached() = withCache(CacheType.StakingProviders) { StakingRepository.getStakingProviders() }
     }
 }

@@ -8,6 +8,8 @@ import com.beeftechlabs.model.address.Address
 import com.beeftechlabs.model.core.Node
 import com.beeftechlabs.model.core.NodeHeartbeatResponse
 import com.beeftechlabs.model.core.NodeType
+import com.beeftechlabs.plugins.endCustomTrace
+import com.beeftechlabs.plugins.startCustomTrace
 import com.beeftechlabs.service.GatewayService
 import com.beeftechlabs.service.SCService
 import com.beeftechlabs.util.fromBase64ToHexString
@@ -19,6 +21,7 @@ object NodeRepository {
     private val elrondConfig by lazy { config.elrond!! }
 
     suspend fun getAllNodes(): Nodes = withContext(Dispatchers.IO) {
+        startCustomTrace("AllNodes")
         val cachedNodes = peekCache<Nodes>(CacheType.Nodes)?.value ?: emptyList()
         val cachedBlsKeys = cachedNodes.map { it.blsKey }
         val cachedBlsOwners = cachedNodes.associate { it.blsKey to it.provider }
@@ -53,6 +56,8 @@ object NodeRepository {
                 }
             }
         )
+    }.also {
+        endCustomTrace("AllNodes")
     }
 
     private suspend fun getBlsOwner(bls: String): Pair<String, String>? =
@@ -65,7 +70,7 @@ object NodeRepository {
             bls to Address(owner.fromBase64ToHexString()).erd
         }
 
-    private const val NUM_PARALLEL_OWNER_FETCH = 50
+    private const val NUM_PARALLEL_OWNER_FETCH = 100
 }
 
 @Serializable

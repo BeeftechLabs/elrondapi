@@ -27,6 +27,25 @@ fun Routing.transactionRoutes() {
             }
         }
 
+        get("/transactions") {
+            val request = TransactionsRequest().let { default ->
+                default.copy(
+                    pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull() ?: default.pageSize,
+                    startTimestamp = call.request.queryParameters["startTimestamp"]?.toLongOrNull()
+                        ?: default.startTimestamp,
+                    newer = call.request.queryParameters["newer"]?.toBooleanStrictOrNull() ?: default.newer,
+                    includeScResults = call.request.queryParameters["includeScResults"]?.toBooleanStrictOrNull()
+                        ?: default.includeScResults,
+                    processTransactions = call.request.queryParameters["processTransactions"]?.toBooleanStrictOrNull()
+                        ?: default.processTransactions
+                )
+            }
+
+            withContext(Dispatchers.IO) {
+                call.respond(TransactionRepository.getTransactions(request))
+            }
+        }
+
         get("/transactions/{address}") {
             val address = call.parameters["address"]
 

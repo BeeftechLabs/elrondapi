@@ -17,10 +17,10 @@ fun BigInteger.denominated(): BigDecimal =
     BigDecimal.fromBigInteger(this).divide(denomination)
 
 fun BigDecimal.formatted(roundPosition: Int = 5): String =
-    roundToDigitPosition(roundPosition.toLong(), RoundingMode.FLOOR).toStringExpanded()
+    roundToDigitPositionAfterDecimalPoint(roundPosition.toLong(), RoundingMode.FLOOR).toStringExpanded()
 
 fun BigDecimal.toDouble(roundPosition: Int = 5): Double =
-    roundToDigitPosition(roundPosition.toLong(), RoundingMode.FLOOR).doubleValue()
+    roundToDigitPositionAfterDecimalPoint(roundPosition.toLong(), RoundingMode.FLOOR).doubleValue()
 
 fun BigDecimal.toLong(): Long = toBigInteger().longValue()
 

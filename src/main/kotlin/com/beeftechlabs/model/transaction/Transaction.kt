@@ -25,6 +25,7 @@ data class Transaction(
     val esdtValues: List<String>,
     val status: String,
     val type: TransactionType,
+    val function: String?,
     val hasScResults: Boolean,
     val isScCall: Boolean,
     val scResults: List<ScResult>
@@ -33,6 +34,6 @@ data class Transaction(
 fun ElasticTransaction.toTransaction(hash: String) = Transaction(
     hash, sender, receiver, Value.extract(value, "EGLD"), Value.None, Value.None, data ?: "", nonce, gasLimit,
     gasPrice, gasUsed, Value.extract(fee, "EGLD"), timestamp, senderShard, receiverShard,
-    tokens ?: emptyList(), esdtValues ?: emptyList(), status, TransactionType.Unknown, hasScResults,
+    tokens ?: emptyList(), esdtValues ?: emptyList(), status, TransactionType.Unknown, "", hasScResults,
     isScCall, emptyList()
 )

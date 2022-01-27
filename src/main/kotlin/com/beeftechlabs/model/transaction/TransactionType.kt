@@ -8,5 +8,6 @@ enum class TransactionType {
     Swap, Wrap, Unwrap, EnterFarm, ExitFarm, EnterLP, ExitLP,
     ModifyDelegationCap, ChangeServiceFee,
     ReceiveValidationReward,
+    SmartContract,
     Unknown
 }

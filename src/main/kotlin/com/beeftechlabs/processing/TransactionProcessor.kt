@@ -10,13 +10,17 @@ import com.beeftechlabs.util.tokenFromArg
 
 object TransactionProcessor {
 
-    fun process(referenceAddress: String, transaction: Transaction): Transaction {
-        return if (!transaction.isScCall) {
+    fun process(filterAddress: String, transaction: Transaction): Transaction {
+        val referenceAddress = filterAddress.ifEmpty { transaction.sender }
+
+        return if (!transaction.isScCall && !transaction.hasScResults) {
             if (transaction.sender == referenceAddress) {
                 transaction.copy(type = TransactionType.Send)
             } else {
                 transaction.copy(type = TransactionType.Receive)
-            }
+            }.copy(
+                value = transaction.transactionValue
+            )
         } else {
             val data = transaction.data.fromBase64String()
             val args = data.split("@")
@@ -27,6 +31,12 @@ object TransactionProcessor {
                     "ESDTNFTTransfer" -> parseESDTNFTTransfer(referenceAddress, transaction, args)
                     "MultiESDTNFTTransfer" -> parseMultiESDTNFTTransfer(referenceAddress, transaction, args)
                     else -> parseOtherTransactions(referenceAddress, transaction, args)
+                }.let { processed ->
+                    if (processed.function.isNullOrEmpty()) {
+                        processed.copy(function = function)
+                    } else {
+                        processed
+                    }
                 }
             } ?: transaction
         }
@@ -36,11 +46,16 @@ object TransactionProcessor {
         val token = args[1].fromHexString().split("-").first()
         var value = Value.extractHex(args[2], token)
         val scResultsRelevantData = transaction.scResults
-            .filter { it.receiver == transaction.sender }
+            .filter { it.receiver == referenceAddress }
             .map { it.data.fromBase64String() }
         var otherValue = Value.None
         var transactionType = TransactionType.Unknown
-        when (args.getOrNull(3)?.fromHexString()) {
+
+        val isSender = referenceAddress == transaction.sender
+
+        val function = args.getOrNull(3)?.fromHexString()
+
+        when (function) {
             "swapTokensFixedInput", "swapTokensFixedOutput" -> {
                 val values = extractAllESDTTransferTypeValues(scResultsRelevantData)
                 values.filter { it.token == value.token }.forEach { value -= it }
@@ -66,20 +81,25 @@ object TransactionProcessor {
             }
             null -> {
                 // normal transfer
-                transactionType = if (referenceAddress == transaction.sender) TransactionType.Send else TransactionType.Receive
+                transactionType = if (isSender) TransactionType.Send  else TransactionType.Receive
+            }
+            else -> {
+                // Some SC call with ESDT
+                transactionType = TransactionType.SmartContract
             }
         }
 
         return transaction.copy(
             value = value,
             otherValue = otherValue,
-            type = transactionType
+            type = transactionType,
+            function = function
         )
     }
 
     private fun parseESDTNFTTransfer(referenceAddress: String, transaction: Transaction, args: List<String>): Transaction {
         val token = args[1].fromHexString().split("-").first()
-        var value = Value.extractHex(args[2], token)
+        var value = Value.extractHex(args[3], token)
         val scResultsRelevantData = transaction.scResults
             .filter { it.receiver == referenceAddress }
             .map { it.data.fromBase64String() }
@@ -89,10 +109,12 @@ object TransactionProcessor {
         val otherAddress = Address(args[4]).erd
         val isSender = transaction.sender == referenceAddress
 
-        when (args.getOrNull(5)?.fromHexString()) {
+        val function = args.getOrNull(5)?.fromHexString()
+
+        when (function) {
             "claimRewardsProxy", "claimRewards", "unlockAssets" -> {
                 val values = extractAllESDTTransferTypeValues(scResultsRelevantData)
-                value = values.first()
+                values.firstOrNull()?.let { value = it }
                 if (values.size > 1) {
                     otherValue = values[1]
                 }
@@ -104,7 +126,7 @@ object TransactionProcessor {
             }
             "exitFarmProxy", "exitFarm" -> {
                 val values = extractAllESDTTransferTypeValues(scResultsRelevantData)
-                value = values.first()
+                values.firstOrNull()?.let { value = it }
                 if (values.size > 1) {
                     otherValue = values[1]
                 }
@@ -112,7 +134,11 @@ object TransactionProcessor {
             }
             null -> {
                 // normal transfer
-                transactionType = if (referenceAddress == transaction.sender) TransactionType.Send else TransactionType.Receive
+                transactionType = if (isSender) TransactionType.Send else TransactionType.Receive
+            }
+            else -> {
+                // Some SC NFT call
+                transactionType = TransactionType.SmartContract
             }
         }
 
@@ -121,7 +147,8 @@ object TransactionProcessor {
             otherValue = otherValue,
             type = transactionType,
             sender = if (isSender) transaction.sender else otherAddress,
-            receiver = if (!isSender) transaction.receiver else otherAddress
+            receiver = if (!isSender) transaction.receiver else otherAddress,
+            function = function
         )
     }
 
@@ -134,19 +161,29 @@ object TransactionProcessor {
         val otherAddress = Address(args[1]).erd
         val isSender = transaction.sender == referenceAddress
 
-        when (args.getOrNull(9)?.fromHexString() ?: args.getOrNull(6)?.fromHexString()) {
-            "enterFarmProxy", "enterFarm", "enterFarmAndLockRewards" -> {
+        val numTokens = args[2].toInt(16)
+        val functionIdx = 3 + numTokens * 3
+        val function = args.getOrNull(functionIdx)?.fromHexString()
+
+        when (function) {
+            "enterFarmProxy", "enterFarm", "enterFarmAndLockRewards", "enterFarmAndLockRewardsProxy" -> {
                 transactionType = TransactionType.EnterFarm
             }
-            "addLiquidity" -> {
+            "addLiquidity", "addLiquidityProxy" -> {
                 val values = extractMultiESDTNFTTransferValue(transaction.data.fromBase64String())
-                value = values.first()
-                otherValue = values.last()
+                values.firstOrNull()?.let { value = it }
+                if (values.size > 1) {
+                    otherValue = values[1]
+                }
                 transactionType = TransactionType.EnterLP
             }
             null -> {
                 // normal transfer
                 transactionType = if (isSender) TransactionType.Send else TransactionType.Receive
+            }
+            else -> {
+                // some MultiESDT SC call
+                transactionType = TransactionType.SmartContract
             }
         }
 
@@ -155,15 +192,17 @@ object TransactionProcessor {
             otherValue = otherValue,
             type = transactionType,
             sender = if (isSender) transaction.sender else otherAddress,
-            receiver = if (!isSender) transaction.receiver else otherAddress
+            receiver = if (!isSender) transaction.receiver else otherAddress,
+            function = function
         )
     }
 
     private fun parseOtherTransactions(referenceAddress: String, transaction: Transaction, args: List<String>): Transaction {
         var value = Value.None
-        var transactionType = TransactionType.Unknown
+        val transactionType: TransactionType
+        val function = args.firstOrNull()
 
-        when (args.firstOrNull()) {
+        when (function) {
             "delegate", "stake" -> {
                 value = transaction.transactionValue
                 transactionType = TransactionType.Delegate
@@ -208,13 +247,17 @@ object TransactionProcessor {
                 if (transaction.sender == METACHAIN) {
                     value = transaction.transactionValue
                     transactionType = TransactionType.ReceiveValidationReward
+                } else {
+                    // SC Call
+                    transactionType = TransactionType.SmartContract
                 }
             }
         }
 
         return transaction.copy(
             value = value,
-            type = transactionType
+            type = transactionType,
+            function = function
         )
     }
 
@@ -242,16 +285,9 @@ object TransactionProcessor {
 
     private fun extractMultiESDTNFTTransferValue(data: String): List<Value> {
         val args = data.split("@")
-        val first: Value
-        val second: Value
-        if (args[4].isNotEmpty()) {
-            first = Value.extractHex(args[4], args[2].tokenFromArg())
-            second = Value.extractHex(args[7], args[5].tokenFromArg())
-        } else {
-            first = Value.extractHex(args[5], args[3].tokenFromArg())
-            second = Value.extractHex(args[8], args[6].tokenFromArg())
-        }
-        return listOf(first, second)
+        val numTokens = args[2].toInt(16)
+
+        return (1..numTokens).map { Value.extractHex(args[3 * it + 2], args[3 * it].tokenFromArg()) }
     }
 
     private fun String.isESDTTypeTransfer() =

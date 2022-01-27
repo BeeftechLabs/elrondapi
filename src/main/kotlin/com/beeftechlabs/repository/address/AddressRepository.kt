@@ -4,6 +4,8 @@ import com.beeftechlabs.model.address.AddressDetails
 import com.beeftechlabs.model.address.AddressesResponse
 import com.beeftechlabs.model.core.LongValue
 import com.beeftechlabs.model.token.Value
+import com.beeftechlabs.plugins.endCustomTrace
+import com.beeftechlabs.plugins.startCustomTrace
 import com.beeftechlabs.repository.StakingRepository
 import com.beeftechlabs.repository.address.model.Account
 import com.beeftechlabs.repository.address.model.AddressSort
@@ -26,6 +28,7 @@ object AddressRepository {
         withSfts: Boolean,
         withStake: Boolean
     ): AddressDetails = coroutineScope {
+        startCustomTrace("AddressDetails:$address")
         val tokens = async { if (withTokens) TokenRepository.getTokensForAddress(address) else null }
         val nfts = async { if (withNfts) TokenRepository.getNftsForAddress(address) else null }
         val sfts = async { if (withSfts) TokenRepository.getSftsForAddress(address) else null }
@@ -49,6 +52,8 @@ object AddressRepository {
             staked = totalStaked,
             unstaked = unstaked
         )
+    }.also {
+        endCustomTrace("AddressDetails:$address")
     }
 
     suspend fun getAddressBalance(address: String): Value = Value.extract(
@@ -65,8 +70,12 @@ object AddressRepository {
         filter: String?,
         requestId: String?,
         startingWith: String?
-    ): AddressesResponse =
-        ElasticRepository.getAddressesPaged(sort, pageSize, filter, requestId, startingWith)
+    ): AddressesResponse {
+        startCustomTrace("GetAddresses:$sort:$pageSize:$filter")
+        return ElasticRepository.getAddressesPaged(sort, pageSize, filter, requestId, startingWith).also {
+            endCustomTrace("GetAddresses:$sort:$pageSize:$filter")
+        }
+    }
 
     private suspend fun getAccountFromGateway(address: String): Account =
         GatewayService.get<GetAccountResponse>("address/$address").data.account

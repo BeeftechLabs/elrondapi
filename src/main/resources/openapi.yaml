@@ -118,6 +118,56 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/Transaction"
+  /transactions:
+    get:
+      tags:
+        - "transaction"
+      summary: "Get Transactions"
+      description: "Get all Transactions. Returns a List of Transaction objects."
+      operationId: "getTransactions"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "query"
+          name: "pageSize"
+          type: "int"
+          description: "Number of maximum Transactions in response (max 100)"
+          required: false
+          default: 20
+        - in: "query"
+          name: "startTimestamp"
+          type: "integer"
+          format: "int64"
+          description: "Start timestamp to query from"
+          required: false
+          default: 0
+        - in: "query"
+          name: "newer"
+          type: "boolean"
+          description: "Whether to query newer or older Transactions starting with startTimestamp"
+          required: false
+          default: true
+        - in: "query"
+          name: "includeScResults"
+          type: "boolean"
+          description: "Whether to include Transaction's scResults. True if processTransactions is true."
+          required: false
+          default: false
+        - in: "query"
+          name: "processTransactions"
+          type: "boolean"
+          description: "Whether to process the Transaction and interpret it"
+          required: false
+          default: true
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/TransactionsResponse"
   /transactions/{address}:
     get:
       tags:
@@ -659,6 +709,8 @@ definitions:
         type: "string"
       type:
         $ref: '#/definitions/TransactionType'
+      function:
+        type: "string"
       hasScResults:
         type: "boolean"
       isScCall:

@@ -26,15 +26,14 @@ fun PipelineContext<Unit, ApplicationCall>.endCallTrace() {
 
 private fun ApplicationRequest.key() = "$${host()}:${path()}"
 
-fun startCustomTrace(name: String) {
+fun startCustomTrace(key: String) {
     if (config.traceCalls) {
-        startTimestamps[name.appendigThread()] = getTimeMillis()
+        startTimestamps[key] = getTimeMillis()
     }
 }
 
-fun endCustomTrace(name: String) {
+fun endCustomTrace(key: String) {
     if (config.traceCalls) {
-        val key = name.appendigThread()
         startTimestamps[key]?.let { startTs ->
             println("Trace $key took ${getTimeMillis() - startTs} ms")
             startTimestamps.remove(key)

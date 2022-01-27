@@ -9,6 +9,8 @@ import com.beeftechlabs.model.token.Token
 import com.beeftechlabs.model.token.TokenProperties
 import com.beeftechlabs.model.token.TokenType
 import com.beeftechlabs.model.token.Value
+import com.beeftechlabs.plugins.endCustomTrace
+import com.beeftechlabs.plugins.startCustomTrace
 import com.beeftechlabs.repository.token.model.FungibleTokenResponse
 import com.beeftechlabs.repository.token.model.GetEsdtsResponse
 import com.beeftechlabs.service.GatewayService
@@ -24,47 +26,55 @@ object TokenRepository {
 
     private val elrondConfig by lazy { config.elrond!! }
 
-    suspend fun getAllTokens(): AllTokens =
-        coroutineScope {
-            val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/fungible-tokens").data.tokens
+    suspend fun getAllTokens(): AllTokens = coroutineScope {
+        startCustomTrace("AllTokens")
+        val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/fungible-tokens").data.tokens
 
-            val tokenProperties = fungibles.chunked(NUM_PARALLEL_FETCH)
-                .map { chunk -> chunk.map { async { getTokenProperties(it) } }.awaitAll() }
-                .flatten()
+        val tokenProperties = fungibles.chunked(NUM_PARALLEL_FETCH)
+            .map { chunk -> chunk.map { async { getTokenProperties(it) } }.awaitAll() }
+            .flatten()
 
-            // todo get assets
+        // todo get assets
 
-            AllTokens(tokenProperties)
-        }
+        AllTokens(tokenProperties)
+    }.also {
+        endCustomTrace("AllTokens")
+    }
 
-    suspend fun getAllNfts(): AllNfts =
-        coroutineScope {
-            val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/non-fungible-tokens").data.tokens
+    suspend fun getAllNfts(): AllNfts = coroutineScope {
+        startCustomTrace("AllNfts")
+        val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/non-fungible-tokens").data.tokens
 
-            val tokenProperties = fungibles.chunked(NUM_PARALLEL_FETCH)
-                .map { chunk -> chunk.map { async { getTokenProperties(it) } }.awaitAll() }
-                .flatten()
+        val tokenProperties = fungibles.chunked(NUM_PARALLEL_FETCH)
+            .map { chunk -> chunk.map { async { getTokenProperties(it) } }.awaitAll() }
+            .flatten()
 
-            // todo get assets
+        // todo get assets
 
-            AllNfts(tokenProperties)
-        }
+        AllNfts(tokenProperties)
+    }.also {
+        endCustomTrace("AllNfts")
+    }
 
-    suspend fun getAllSfts(): AllSfts =
-        coroutineScope {
-            val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/semi-fungible-tokens").data.tokens
+    suspend fun getAllSfts(): AllSfts = coroutineScope {
+        startCustomTrace("AllSfts")
+        val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/semi-fungible-tokens").data.tokens
 
-            val tokenProperties = fungibles.chunked(NUM_PARALLEL_FETCH)
-                .map { chunk -> chunk.map { async { getTokenProperties(it) } }.awaitAll() }
-                .flatten()
+        val tokenProperties = fungibles.chunked(NUM_PARALLEL_FETCH)
+            .map { chunk -> chunk.map { async { getTokenProperties(it) } }.awaitAll() }
+            .flatten()
 
-            // todo get assets
+        // todo get assets
 
-            AllSfts(tokenProperties)
-        }
+        AllSfts(tokenProperties)
+    }.also {
+        endCustomTrace("AllSfts")
+    }
 
     suspend fun getTokensForAddress(address: String): List<Token> = coroutineScope {
-        val esdtsDeferred = async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
+        startCustomTrace("TokensForAddress:$address")
+        val esdtsDeferred =
+            async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
         val tokensDeferred = async { AllTokens.cached() }
 
         val esdts = esdtsDeferred.await()
@@ -82,10 +92,14 @@ object TokenRepository {
                 )
             }
         }
+    }.also {
+        endCustomTrace("TokensForAddress:$address")
     }
 
     suspend fun getNftsForAddress(address: String): List<Token> = coroutineScope {
-        val esdtsDeferred = async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
+        startCustomTrace("NftsForAddress:$address")
+        val esdtsDeferred =
+            async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
         val nftsDeferred = async { AllNfts.cached() }
 
         val esdts = esdtsDeferred.await()
@@ -103,10 +117,14 @@ object TokenRepository {
                 )
             }
         }
+    }.also {
+        endCustomTrace("NftsForAddress:$address")
     }
 
     suspend fun getSftsForAddress(address: String): List<Token> = coroutineScope {
-        val esdtsDeferred = async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
+        startCustomTrace("SftsForAddress:$address")
+        val esdtsDeferred =
+            async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
         val sftsDeferred = async { AllSfts.cached() }
 
         val esdts = esdtsDeferred.await()
@@ -124,6 +142,8 @@ object TokenRepository {
                 )
             }
         }
+    }.also {
+        endCustomTrace("SftsForAddress:$address")
     }
 
     private suspend fun getTokenProperties(id: String, collection: String? = null): TokenProperties {
