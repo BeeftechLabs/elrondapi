@@ -16,12 +16,13 @@ fun Routing.addressRoutes() {
             val sort =
                 call.request.queryParameters["sort"]?.let { AddressSort.valueOfOrDefault(it, AddressSort.AddressAsc) }
                     ?: AddressSort.AddressAsc
+            val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull() ?: 20
             val filter = call.request.queryParameters["filter"]
             val requestId = call.request.queryParameters["requestId"]
             val startingWith = call.request.queryParameters["startingWith"]
 
             withContext(Dispatchers.IO) {
-                call.respond(AddressRepository.getAddresses(sort, filter, requestId, startingWith))
+                call.respond(AddressRepository.getAddresses(sort, pageSize, filter, requestId, startingWith))
             }
         }
 

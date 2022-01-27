@@ -61,11 +61,12 @@ object AddressRepository {
 
     suspend fun getAddresses(
         sort: AddressSort,
+        pageSize: Int,
         filter: String?,
         requestId: String?,
         startingWith: String?
     ): AddressesResponse =
-        ElasticRepository.getAddressesPaged(sort, filter, requestId, startingWith)
+        ElasticRepository.getAddressesPaged(sort, pageSize, filter, requestId, startingWith)
 
     private suspend fun getAccountFromGateway(address: String): Account =
         GatewayService.get<GetAccountResponse>("address/$address").data.account

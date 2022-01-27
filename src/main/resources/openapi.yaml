@@ -247,6 +247,12 @@ paths:
           required: false
           default: "AddressAsc"
         - in: "query"
+          name: "pageSize"
+          type: "integer"
+          description: "Requested number of addresses per page. Capped at a predefined value."
+          required: false
+          default: "20"
+        - in: "query"
           name: "filter"
           type: "string"
           description: "Filter addresses using this keyword"

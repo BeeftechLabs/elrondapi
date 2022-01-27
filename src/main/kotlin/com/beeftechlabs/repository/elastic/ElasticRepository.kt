@@ -324,11 +324,13 @@ object ElasticRepository {
 
     suspend fun getAddressesPaged(
         sort: AddressSort,
+        requestedPageSize: Int,
         filter: String?,
         requestId: String?,
         startingWith: String?
     ): AddressesResponse {
         val pitId = requestId ?: createPit("accounts")
+        val pageSize = minOf(requestedPageSize, config.maxPageSize)
 
         val searchRequest = SearchRequest.Builder()
             .apply {
@@ -355,7 +357,7 @@ object ElasticRepository {
                     }
                 }
             }
-            .size(NUM_ADDRESSES_PER_PAGE)
+            .size(pageSize)
             .pit { p ->
                 p.id(pitId).keepAlive(DEFAULT_PIT_LENGTH)
             }
@@ -389,7 +391,7 @@ object ElasticRepository {
                         balance = Value(it.balance, it.balanceNum, "EGLD")
                     )
                 },
-                hasMore = addresses.size == NUM_ADDRESSES_PER_PAGE,
+                hasMore = addresses.size == pageSize,
                 requestId = response.pitId() ?: pitId,
                 firstResult = firstResult,
                 lastResult = lastResult
@@ -407,6 +409,5 @@ object ElasticRepository {
             OpenPointInTimeRequest.Builder().index(index).keepAlive(keepAlive).build()
         ).suspending().id()
 
-    private const val NUM_ADDRESSES_PER_PAGE = 20
     private val DEFAULT_PIT_LENGTH = Time.Builder().time("1m").build()
 }
