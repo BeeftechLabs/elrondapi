@@ -5,6 +5,7 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.util.date.*
 import io.ktor.util.pipeline.*
+import mu.KotlinLogging
 
 private val startTimestamps = mutableMapOf<String, Long>()
 
@@ -18,7 +19,7 @@ fun PipelineContext<Unit, ApplicationCall>.endCallTrace() {
     if (config.traceCalls) {
         val key = call.request.key()
         startTimestamps[key]?.let { startTs ->
-            println("Call to ${call.request.path()} took ${getTimeMillis() - startTs} ms")
+            logger.trace { "Call to ${call.request.path()} took ${getTimeMillis() - startTs} ms" }
             startTimestamps.remove(key)
         }
     }
@@ -35,10 +36,12 @@ fun startCustomTrace(key: String) {
 fun endCustomTrace(key: String) {
     if (config.traceCalls) {
         startTimestamps[key]?.let { startTs ->
-            println("Trace $key took ${getTimeMillis() - startTs} ms")
+            logger.trace { "Trace $key took ${getTimeMillis() - startTs} ms" }
             startTimestamps.remove(key)
         }
     }
 }
+
+private val logger = KotlinLogging.logger("TRACE")
 
 private fun String.appendigThread() = "$this:${Thread.currentThread().name}"

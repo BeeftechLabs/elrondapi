@@ -21,6 +21,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
+import mu.KotlinLogging
 
 object TokenRepository {
 
@@ -171,7 +172,7 @@ object TokenRepository {
             "MetaESDT" -> TokenType.MetaESDT
             "FungibleESDT" -> TokenType.ESDT
             else -> {
-                println("Error: unknown token type: $type")
+                logger.error { "Error: unknown token type: $type" }
                 TokenType.ESDT
             }
         }
@@ -204,6 +205,8 @@ object TokenRepository {
     }
 
     private const val NUM_PARALLEL_FETCH = 100
+
+    val logger = KotlinLogging.logger {}
 }
 
 @Serializable

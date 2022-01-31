@@ -4,6 +4,7 @@ import com.beeftechlabs.config
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import mu.KotlinLogging
 import redis.clients.jedis.JedisPooled
 import redis.clients.jedis.params.SetParams
 import kotlin.time.Duration
@@ -24,8 +25,7 @@ object RedisStore {
                 try {
                     json.decodeFromString<T>(jsonValue)
                 } catch (exception: Exception) {
-                    println("Error reading $key: $exception")
-                    println("Had in store: $jsonValue")
+                    logger.error(exception) { "Error reading $key, had in store: $jsonValue" }
                     null
                 }
             }
@@ -38,8 +38,7 @@ object RedisStore {
                 try {
                     json.decodeFromString<T>(jsonValue)
                 } catch (exception: Exception) {
-                    println("Error reading $key: $exception")
-                    println("Had in store: $jsonValue")
+                    logger.error(exception) { "Error reading $key, had in store: $jsonValue" }
                     null
                 }
             }
@@ -53,4 +52,6 @@ object RedisStore {
             SetParams.setParams().ex(ttl.inWholeSeconds)
         )
     }
+
+    val logger = KotlinLogging.logger {}
 }

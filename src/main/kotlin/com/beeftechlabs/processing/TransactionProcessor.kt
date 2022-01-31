@@ -208,7 +208,7 @@ object TransactionProcessor {
                 transactionType = TransactionType.Delegate
             }
             "modifyTotalDelegationCap" -> {
-                value = Value.extractHex(args[1], "EGLD")
+                value = args.getOrNull(1)?.let { Value.extractHex(it, "EGLD") } ?: Value.None
                 transactionType = TransactionType.ModifyDelegationCap
             }
             "claimRewards" -> {
@@ -218,7 +218,7 @@ object TransactionProcessor {
                 transactionType = TransactionType.Claim
             }
             "unDelegate", "unStake" -> {
-                value = Value.extractHex(args[1], "EGLD")
+                value = args.getOrNull(1)?.let { Value.extractHex(it, "EGLD") } ?: Value.None
                 transactionType = TransactionType.Undelegate
             }
             "reDelegateRewards" -> {
@@ -236,7 +236,7 @@ object TransactionProcessor {
                 transactionType = TransactionType.Withdraw
             }
             "changeServiceFee" -> {
-                value = Value.extractHex(args[1], "EGLD")
+                value = args.getOrNull(1)?.let { Value.extractHex(it, "EGLD") } ?: Value.None
                 transactionType = TransactionType.ChangeServiceFee
             }
             "wrapEgld" -> {
@@ -285,9 +285,13 @@ object TransactionProcessor {
 
     private fun extractMultiESDTNFTTransferValue(data: String): List<Value> {
         val args = data.split("@")
-        val numTokens = args[2].toInt(16)
+        val numTokens = if (args.size > 5) args[2].toInt(16) else 1
 
-        return (1..numTokens).map { Value.extractHex(args[3 * it + 2], args[3 * it].tokenFromArg()) }
+        return if (numTokens > 1) {
+            (1..numTokens).map { Value.extractHex(args[3 * it + 2], args[3 * it].tokenFromArg()) }
+        } else {
+            listOf(Value.extractHex(args[4], args[2].tokenFromArg()))
+        }
     }
 
     private fun String.isESDTTypeTransfer() =

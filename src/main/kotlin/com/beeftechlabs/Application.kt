@@ -1,6 +1,9 @@
 package com.beeftechlabs
 
-import com.beeftechlabs.plugins.*
+import com.beeftechlabs.plugins.configureHTTP
+import com.beeftechlabs.plugins.configureMonitoring
+import com.beeftechlabs.plugins.configureRouting
+import com.beeftechlabs.plugins.configureSerialization
 import com.sksamuel.hoplite.ConfigLoader
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*

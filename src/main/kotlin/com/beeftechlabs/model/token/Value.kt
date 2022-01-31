@@ -6,6 +6,8 @@ import com.beeftechlabs.util.toDouble
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import com.ionspin.kotlin.bignum.integer.toBigInteger
 import kotlinx.serialization.Serializable
+import mu.KotlinLogging
+import java.lang.Exception
 
 @Serializable
 data class Value(
@@ -40,22 +42,42 @@ data class Value(
 
         fun zeroEgld() = zero("EGLD")
 
-        fun extractHex(bigNumber: String, token: String) = Value(
-            bigNumber = bigNumber.toBigInteger(16).toString(),
-            denominated = bigNumber.denominatedBigDecimal().toDouble(),
-            token = token
-        )
+        fun extractHex(bigNumber: String, token: String, onError: (() -> Value)? = null) =
+            try {
+                Value(
+                    bigNumber = bigNumber.toBigInteger(16).toString(),
+                    denominated = bigNumber.denominatedBigDecimal().toDouble(),
+                    token = token
+                )
+            } catch (exception: Exception) {
+                logger.error(exception) { "Error extracting value from hex string" }
+                onError?.invoke() ?: None
+            }
 
-        fun extract(bigNumber: String, token: String) = Value(
-            bigNumber = bigNumber,
-            denominated = bigNumber.denominatedBigDecimal(isHex = false).toDouble(),
-            token = token
-        )
+        fun extract(bigNumber: String, token: String, onError: (() -> Value)? = null) =
+            try {
+                Value(
+                    bigNumber = bigNumber,
+                    denominated = bigNumber.denominatedBigDecimal(isHex = false).toDouble(),
+                    token = token
+                )
+            } catch (exception: Exception) {
+                logger.error(exception) { "Error extracting value from string" }
+                onError?.invoke() ?: None
+            }
 
-        fun extract(bigNumber: BigInteger, token: String) = Value(
-            bigNumber = bigNumber.toString(),
-            denominated = bigNumber.denominated().toStringExpanded().toDouble(),
-            token = token
-        )
+        fun extract(bigNumber: BigInteger, token: String, onError: (() -> Value)? = null) =
+            try {
+                Value(
+                    bigNumber = bigNumber.toString(),
+                    denominated = bigNumber.denominated().toStringExpanded().toDouble(),
+                    token = token
+                )
+            } catch (exception: Exception) {
+                logger.error(exception) { "Error extracting value from string" }
+                onError?.invoke() ?: None
+            }
+
+        private val logger = KotlinLogging.logger {}
     }
 }
