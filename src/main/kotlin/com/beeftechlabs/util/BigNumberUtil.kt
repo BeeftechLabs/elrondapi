@@ -19,8 +19,7 @@ fun BigInteger.denominated(): BigDecimal =
 fun BigDecimal.formatted(roundPosition: Int = 5): String =
     roundToDigitPositionAfterDecimalPoint(roundPosition.toLong(), RoundingMode.FLOOR).toStringExpanded()
 
-fun BigDecimal.toDouble(roundPosition: Int = 5): Double =
-    roundToDigitPositionAfterDecimalPoint(roundPosition.toLong(), RoundingMode.FLOOR).doubleValue()
+fun BigDecimal.toDouble(): Double = doubleValue(false)
 
 fun BigDecimal.toLong(): Long = toBigInteger().longValue()
 

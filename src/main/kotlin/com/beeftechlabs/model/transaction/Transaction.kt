@@ -1,7 +1,7 @@
 package com.beeftechlabs.model.transaction
 
-import com.beeftechlabs.repository.elastic.model.ElasticTransaction
 import com.beeftechlabs.model.token.Value
+import com.beeftechlabs.repository.elastic.model.ElasticTransaction
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -10,8 +10,8 @@ data class Transaction(
     val sender: String,
     val receiver: String,
     val transactionValue: Value,
-    val value: Value,
-    val otherValue: Value,
+    val outValues: List<Value>,
+    val inValues: List<Value>,
     val data: String,
     val nonce: Long,
     val gasLimit: Long,
@@ -32,7 +32,7 @@ data class Transaction(
 )
 
 fun ElasticTransaction.toTransaction(hash: String) = Transaction(
-    hash, sender, receiver, Value.extract(value, "EGLD"), Value.None, Value.None, data ?: "", nonce, gasLimit,
+    hash, sender, receiver, Value.extract(value, "EGLD"), emptyList(), emptyList(), data ?: "", nonce, gasLimit,
     gasPrice, gasUsed, Value.extract(fee, "EGLD"), timestamp, senderShard, receiverShard,
     tokens ?: emptyList(), esdtValues ?: emptyList(), status, TransactionType.Unknown, "", hasScResults,
     isScCall, emptyList()

@@ -2,12 +2,12 @@ package com.beeftechlabs.model.token
 
 import com.beeftechlabs.util.denominated
 import com.beeftechlabs.util.denominatedBigDecimal
+import com.beeftechlabs.util.formatted
 import com.beeftechlabs.util.toDouble
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import com.ionspin.kotlin.bignum.integer.toBigInteger
 import kotlinx.serialization.Serializable
 import mu.KotlinLogging
-import java.lang.Exception
 
 @Serializable
 data class Value(
@@ -35,6 +35,14 @@ data class Value(
         }
     }
 
+    fun abs(): Value = bigNumber.toBigDecimal().abs().let { abs ->
+        Value(
+            abs.toString(),
+            abs.toDouble(),
+            token
+        )
+    }
+
     companion object {
         val None = Value("", null, "")
 
@@ -50,7 +58,7 @@ data class Value(
                     token = token
                 )
             } catch (exception: Exception) {
-                logger.error(exception) { "Error extracting value from hex string" }
+                logger.error(exception) { "Error extracting value $bigNumber from hex string" }
                 onError?.invoke() ?: None
             }
 
@@ -62,7 +70,7 @@ data class Value(
                     token = token
                 )
             } catch (exception: Exception) {
-                logger.error(exception) { "Error extracting value from string" }
+                logger.error(exception) { "Error extracting value $bigNumber from string" }
                 onError?.invoke() ?: None
             }
 
@@ -70,11 +78,11 @@ data class Value(
             try {
                 Value(
                     bigNumber = bigNumber.toString(),
-                    denominated = bigNumber.denominated().toStringExpanded().toDouble(),
+                    denominated = bigNumber.denominated().toDouble(),
                     token = token
                 )
             } catch (exception: Exception) {
-                logger.error(exception) { "Error extracting value from string" }
+                logger.error(exception) { "Error extracting value $bigNumber from string" }
                 onError?.invoke() ?: None
             }
 
