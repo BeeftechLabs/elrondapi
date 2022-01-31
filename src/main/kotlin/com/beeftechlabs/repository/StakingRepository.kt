@@ -39,6 +39,18 @@ object StakingRepository {
 
         val delegations = delegationsDeferred.await()
 
+        val actualDelegations =
+            withCache(CacheType.AddressDelegationsVm, address) {
+                delegations.map {
+                    it.stakingProvider.address to async {
+                        getAddressDelegatedListForContract(
+                            address,
+                            it.stakingProvider.address
+                        )
+                    }
+                }.associate { it.first to it.second.await() }
+            }
+
         val undelegations =
             withCache(CacheType.AddressUndelegations, address) {
                 delegations.map {
@@ -79,13 +91,14 @@ object StakingRepository {
 
         delegations.map { delegation ->
             delegation.copy(
+                value = actualDelegations[delegation.stakingProvider.address] ?: Value.zeroEgld(),
                 stakingProvider = providers.await().find { it.address == delegation.stakingProvider.address }
                     ?: delegation.stakingProvider,
                 undelegatedList = undelegations[delegation.stakingProvider.address] ?: emptyList(),
                 claimable = claimables[delegation.stakingProvider.address] ?: Value.zeroEgld(),
                 totalRewards = totalRewards[delegation.stakingProvider.address] ?: Value.zeroEgld()
             )
-        }
+        }.filter { (it.value.denominated ?: 0.0) > 0 || it.undelegatedList.isNotEmpty() }
     }.also {
         endCustomTrace("GetDelegations:$address")
     }
@@ -157,6 +170,16 @@ object StakingRepository {
         )
     }
 
+    private suspend fun getAddressDelegatedListForContract(
+        address: String,
+        contract: String
+    ): Value {
+        val response = SCService.vmQuery(contract, "getUserActiveStake", listOf(Address(address).hex))
+
+        return response.firstOrNull()?.takeIf { it.isNotEmpty() }?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
+            ?: Value.zeroEgld()
+    }
+
     private suspend fun getAddressUndelegatedListForContract(
         address: String,
         contract: String,
@@ -185,7 +208,7 @@ object StakingRepository {
     ): Value {
         val response = SCService.vmQuery(contract, "getClaimableRewards", listOf(Address(address).hex))
 
-        return response.firstOrNull()?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
+        return response.firstOrNull()?.takeIf { it.isNotEmpty() }?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
             ?: Value.zeroEgld()
     }
 
@@ -195,7 +218,7 @@ object StakingRepository {
     ): Value {
         val response = SCService.vmQuery(contract, "getTotalCumulatedRewardsForUser", listOf(Address(address).hex))
 
-        return response.firstOrNull()?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
+        return response.firstOrNull()?.takeIf { it.isNotEmpty() }?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
             ?: Value.zeroEgld()
     }
 

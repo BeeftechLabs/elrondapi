@@ -34,6 +34,7 @@ enum class CacheType(val ttl: Duration) {
     NetworkConfig(5.minutes),
     NetworkStatus(5.minutes),
     AddressDelegations(5.minutes),
+    AddressDelegationsVm(5.minutes),
     AddressUndelegations(5.minutes),
     AddressClaimable(5.minutes),
     AddressTotalRewards(5.minutes),
