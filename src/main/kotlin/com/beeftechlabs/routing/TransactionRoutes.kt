@@ -86,7 +86,7 @@ fun Routing.transactionRoutes() {
                         withContext(Dispatchers.Default) {
                             startCustomTrace("ProcessSingleTransaction:$hash")
                             call.respond(
-                                TransactionProcessor.process(transaction.sender, transaction).also {
+                                TransactionProcessor.process(transaction).also {
                                     endCustomTrace("ProcessSingleTransaction:$hash")
                                 }
                             )

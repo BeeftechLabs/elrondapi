@@ -725,8 +725,8 @@ definitions:
           $ref: '#/definitions/ScResult'
   TransactionType:
     type: "string"
-    enum: [Send, Receive, Delegate, Undelegate, Withdraw, Claim, Compound, Swap, Wrap, Unwrap, EnterFarm, ExitFarm,
-           EnterLP, ExitLP, ModifyDelegationCap, ChangeServiceFee, ReceiveValidationReward, Unknown]
+    enum: [Transfer, Delegate, Undelegate, Withdraw, Claim, Compound, Swap, Wrap, Unwrap, EnterFarm, ExitFarm,
+           EnterLP, ExitLP, ModifyDelegationCap, ChangeServiceFee, ReceiveValidationReward, SmartContract, Unknown]
   ScResult:
     type: "object"
     properties:

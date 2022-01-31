@@ -177,7 +177,7 @@ object ElasticRepository {
         val processedTransactions = if (request.processTransactions) {
             withContext(Dispatchers.Default) {
                 startCustomTrace("ProcessTransactionsFromElastic:${request.address}")
-                updatedTransactions.map { TransactionProcessor.process(request.address, it) }.also {
+                updatedTransactions.map { TransactionProcessor.process(it) }.also {
                     endCustomTrace("ProcessTransactionsFromElastic:${request.address}")
                 }
             }
