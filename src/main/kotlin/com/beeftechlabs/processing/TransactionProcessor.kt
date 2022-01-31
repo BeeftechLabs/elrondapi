@@ -9,6 +9,7 @@ import com.beeftechlabs.util.fromBase64String
 import com.beeftechlabs.util.fromHexString
 import com.beeftechlabs.util.tokenFromArg
 import mu.KotlinLogging
+import java.lang.Exception
 
 object TransactionProcessor {
 
@@ -303,11 +304,21 @@ object TransactionProcessor {
         extractMultiESDTNFTTransferValue(data.split("@"))
 
     private fun extractMultiESDTNFTTransferValue(args: List<String>): List<Value> {
-        val numTokens = args[2].toInt(16)
+        try {
+            val numTokens = args[2].toInt(16)
 
-        return (1..numTokens).map { Value.extractHex(args[3 * it + 2], args[3 * it].tokenFromArg()) }.also { values ->
-            if (values.contains(Value.None)) {
-                logger.error { "Error while parsing MultiESDTNFTTransfer values from $args" }
+            return (1..numTokens).map { Value.extractHex(args[3 * it + 2], args[3 * it].tokenFromArg()) }.also { values ->
+                if (values.contains(Value.None)) {
+                    logger.error { "Error while parsing MultiESDTNFTTransfer values from $args" }
+                }
+            }
+        } catch (ignored: Exception) {
+            val numTokens = args[1].toInt(16)
+
+            return (1..numTokens).map { Value.extractHex(args[3 * it + 1], args[3 * it - 1].tokenFromArg()) }.also { values ->
+                if (values.contains(Value.None)) {
+                    logger.error { "Error while parsing MultiESDTNFTTransfer values from $args" }
+                }
             }
         }
     }
