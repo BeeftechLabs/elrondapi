@@ -82,24 +82,28 @@ object MdexRepository {
     }
 
     suspend fun getTokenPairDetails(address: String): TokenPair? = coroutineScope {
-        val allPairsDeferred = async(Dispatchers.IO) { AllTokenPairs.cached() }
-        val allTokensDeferred = async(Dispatchers.IO) { AllTokens.cached() }
-        val totalSupplyDeferred = async(Dispatchers.IO) { SCService.vmQueryBigInt(address, "getTotalSupply") }
-        val totalFeePercentDeferred = async(Dispatchers.IO) { SCService.vmQueryDouble(address, "getTotalFeePercent") }
-        val specialFeePercentDeferred = async(Dispatchers.IO) { SCService.vmQueryDouble(address, "getSpecialFee") }
-        val stateDeferred = async(Dispatchers.IO) { SCService.vmQueryInt(address, "getState") }
-        val lpTokenDeferred = async(Dispatchers.IO) { SCService.vmQueryString(address, "getLpTokenIdentifier") }
+        withCache(CacheType.TokenPairDetails, address) {
+            val allPairsDeferred = async(Dispatchers.IO) { AllTokenPairs.cached() }
+            val allTokensDeferred = async(Dispatchers.IO) { AllTokens.cached() }
+            val totalSupplyDeferred = async(Dispatchers.IO) { SCService.vmQueryBigInt(address, "getTotalSupply") }
+            val totalFeePercentDeferred =
+                async(Dispatchers.IO) { SCService.vmQueryDouble(address, "getTotalFeePercent") }
+            val specialFeePercentDeferred = async(Dispatchers.IO) { SCService.vmQueryDouble(address, "getSpecialFee") }
+            val stateDeferred = async(Dispatchers.IO) { SCService.vmQueryInt(address, "getState") }
+            val lpTokenDeferred = async(Dispatchers.IO) { SCService.vmQueryString(address, "getLpTokenIdentifier") }
 
-        val allPairs = allPairsDeferred.await()
-        val allTokens = allTokensDeferred.await()
+            val allPairs = allPairsDeferred.await()
+            val allTokens = allTokensDeferred.await()
 
-        allPairs.value.find { it.address == address }?.copy(
-            lpTokenTotalSupply = totalSupplyDeferred.await(),
-            totalFeePercent = totalFeePercentDeferred.await()?.div(1000000),
-            specialFeePercent = specialFeePercentDeferred.await()?.div(1000000),
-            state = stateDeferred.await()?.let { TokenPairState.values().getOrNull(it) },
-            lpToken = lpTokenDeferred.await()?.let { lpTokenId -> allTokens.value.find { it.identifier == lpTokenId } }
-        )
+            allPairs.value.find { it.address == address }?.copy(
+                lpTokenTotalSupply = totalSupplyDeferred.await(),
+                totalFeePercent = totalFeePercentDeferred.await()?.div(1000000),
+                specialFeePercent = specialFeePercentDeferred.await()?.div(1000000),
+                state = stateDeferred.await()?.let { TokenPairState.values().getOrNull(it) },
+                lpToken = lpTokenDeferred.await()
+                    ?.let { lpTokenId -> allTokens.value.find { it.identifier == lpTokenId } }
+            )
+        }
     }
 
     private const val CREATE_PAIR = "y3jlyxrlugfpcka"
