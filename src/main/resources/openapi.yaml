@@ -68,6 +68,14 @@ tags:
 
   - name: "mdex"
     description: "Utilities for Maiar Exchange"
+  - name: "tokenpair_model"
+    x-displayName: TokenPair
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/TokenPair" />
+  - name: "tokenpairdetails_model"
+    x-displayName: TokenPairDetails
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/TokenPairDetails" />
 
 x-tagGroups:
   - name: Endpoints
@@ -77,6 +85,7 @@ x-tagGroups:
       - node
       - token
       - network
+      - mdex
   - name: Models
     tags:
       - transaction_model
@@ -87,6 +96,8 @@ x-tagGroups:
       - tokenProperties_model
       - networkconfig_model
       - networkstatus_model
+      - tokenpair_model
+      - tokenpairdetails_model
 
 schemes:
   - "https"
@@ -742,6 +753,27 @@ paths:
             items:
               $ref: "#/definitions/TokenPair"
 
+  /mdex/tokenPairs/{address}:
+    get:
+      tags:
+        - "mdex"
+      summary: "Get Token Pair details"
+      description: "Get more information about a Token Pair. Returns a TokenPairDetails object."
+      operationId: "getTokenPairDetails"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        "400":
+          description: "Invalid address"
+        "404":
+          description: "Token Pair not found"
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/TokenPairDetails"
+
 components:
   schemas:
     Transaction:
@@ -1063,6 +1095,28 @@ definitions:
       second:
         $ref: '#/definitions/TokenProperties'
       address:
+        type: "string"
+
+  TokenPairDetails:
+    type: "object"
+    properties:
+      first:
+        $ref: '#/definitions/TokenProperties'
+      second:
+        $ref: '#/definitions/TokenProperties'
+      address:
+        type: "string"
+      totalFeePercent:
+        type: "number"
+        format: "double"
+      specialFeePercent:
+        type: "number"
+        format: "double"
+      state:
+        type: "string"
+      lpToken:
+        $ref: '#/definitions/TokenProperties'
+      lpTokenTotalSupply:
         type: "string"
 
   Node:

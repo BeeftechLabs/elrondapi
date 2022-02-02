@@ -10,6 +10,12 @@ fun String.denominatedBigDecimal(isHex: Boolean = true): BigDecimal =
     BigDecimal.fromBigInteger(BigInteger.parseString(this, if (isHex) 16 else 10))
         .divide(denomination)
 
+fun String.bigDecimal(isHex: Boolean = true): BigDecimal =
+    BigDecimal.fromBigInteger(BigInteger.parseString(this, if (isHex) 16 else 10))
+
+fun String.bigInteger(isHex: Boolean = true): BigInteger =
+    BigInteger.parseString(this, if (isHex) 16 else 10)
+
 fun BigDecimal.denominated(): BigDecimal =
     divide(denomination)
 
