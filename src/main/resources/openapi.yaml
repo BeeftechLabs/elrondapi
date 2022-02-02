@@ -168,6 +168,33 @@ paths:
             type: "array"
             items:
               $ref: "#/definitions/TransactionsResponse"
+    post:
+      tags:
+        - "transaction"
+      summary: "Get Transactions"
+      description: "Get all Transactions matching request. Returns a List of Transaction objects."
+      operationId: "getTransactionsWithPost"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "Get all transactions matching request"
+          required: true
+          schema:
+            $ref: '#/definitions/TransactionRequest'
+      responses:
+        "400":
+          description: "Missing address in request"
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/TransactionsResponse"
+              
   /transactions/{address}:
     get:
       tags:
@@ -216,33 +243,6 @@ paths:
           description: "Whether to process the Transaction and interpret it"
           required: false
           default: true
-      responses:
-        "400":
-          description: "Missing address in request"
-        "200":
-          description: "successful operation"
-          schema:
-            type: "array"
-            items:
-              $ref: "#/definitions/TransactionsResponse"
-  /transactions:
-    post:
-      tags:
-        - "transaction"
-      summary: "Get Transactions"
-      description: "Get all Transactions matching request. Returns a List of Transaction objects."
-      operationId: "getTransactionsWithPost"
-      consumes:
-        - "application/json"
-      produces:
-        - "application/json"
-      parameters:
-        - in: "body"
-          name: "body"
-          description: "Get all transactions matching request"
-          required: true
-          schema:
-            $ref: '#/definitions/TransactionRequest'
       responses:
         "400":
           description: "Missing address in request"
@@ -506,10 +506,31 @@ paths:
             items:
               $ref: "#/definitions/TokenProperties"
 
-  /tokens/{address}:
+  /tokens/{identifier}:
     get:
       tags:
         - "token"
+      summary: "Get ESDT/MetaESDT properties"
+      description: "Get an ESDT's or MetaESDT's properties. Returns a TokenProperty object."
+      operationId: "getTokenProperties"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        "400":
+          description: "Invalid identifier"
+        "404":
+          description: "ESDT/MetaESDT not found"
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/TokenProperties"
+
+  /addresses/{address}/tokens:
+    get:
+      tags:
+        - "address"
       summary: "Get Address Tokens"
       description: "Get All Tokens for an Address. Returns a List of Token objects."
       operationId: "getTokensForAddress"
@@ -524,6 +545,8 @@ paths:
           description: "Address in erd format"
           required: true
       responses:
+        "400":
+          description: "Invalid address"
         "200":
           description: "successful operation"
           schema:
@@ -550,10 +573,31 @@ paths:
             items:
               $ref: "#/definitions/TokenProperties"
 
-  /nfts/{address}:
+  /nfts/{identifier}:
     get:
       tags:
         - "token"
+      summary: "Get NFT properties"
+      description: "Get an NFT's properties. Returns a TokenProperty object."
+      operationId: "getNftProperties"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        "400":
+          description: "Invalid identifier"
+        "404":
+          description: "NFT not found"
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/TokenProperties"
+
+  /addresses/{address}/nfts:
+    get:
+      tags:
+        - "address"
       summary: "Get Address NFTs"
       description: "Get All NFTs for an Address. Returns a List of Token objects."
       operationId: "getNftsForAddress"
@@ -568,6 +612,8 @@ paths:
           description: "Address in erd format"
           required: true
       responses:
+        "400":
+          description: "Invalid address"
         "200":
           description: "successful operation"
           schema:
@@ -594,10 +640,31 @@ paths:
             items:
               $ref: "#/definitions/TokenProperties"
 
-  /sfts/{address}:
+  /sfts/{identifier}:
     get:
       tags:
         - "token"
+      summary: "Get SFT properties"
+      description: "Get an SFT's properties. Returns a TokenProperty object."
+      operationId: "getSftProperties"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        "400":
+          description: "Invalid identifier"
+        "404":
+          description: "SFT not found"
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/TokenProperties"
+
+  /addresses/{address}/sfts:
+    get:
+      tags:
+        - "address"
       summary: "Get Address SFTs"
       description: "Get All SFTs for an Address. Returns a List of Token objects."
       operationId: "getSftsForAddress"
@@ -612,6 +679,8 @@ paths:
           description: "Address in erd format"
           required: true
       responses:
+        "400":
+          description: "Invalid address"
         "200":
           description: "successful operation"
           schema:

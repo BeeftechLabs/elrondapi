@@ -3,6 +3,7 @@ package com.beeftechlabs.routing
 import com.beeftechlabs.config
 import com.beeftechlabs.repository.address.AddressRepository
 import com.beeftechlabs.repository.address.model.AddressSort
+import com.beeftechlabs.repository.token.TokenRepository
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
@@ -69,6 +70,39 @@ fun Routing.addressRoutes() {
             } else {
                 withContext(Dispatchers.IO) {
                     call.respond(AddressRepository.getAddressNonce(address))
+                }
+            }
+        }
+
+        get("/addresses/{address}/tokens") {
+            val address = call.parameters["address"]
+            if (address.isNullOrEmpty()) {
+                call.response.status(HttpStatusCode.BadRequest)
+            } else {
+                withContext(Dispatchers.IO) {
+                    call.respond(TokenRepository.getTokensForAddress(address))
+                }
+            }
+        }
+
+        get("/addresses/{address}/nfts") {
+            val address = call.parameters["address"]
+            if (address.isNullOrEmpty()) {
+                call.response.status(HttpStatusCode.BadRequest)
+            } else {
+                withContext(Dispatchers.IO) {
+                    call.respond(TokenRepository.getNftsForAddress(address))
+                }
+            }
+        }
+
+        get("/addresses/{address}/sfts") {
+            val address = call.parameters["address"]
+            if (address.isNullOrEmpty()) {
+                call.response.status(HttpStatusCode.BadRequest)
+            } else {
+                withContext(Dispatchers.IO) {
+                    call.respond(TokenRepository.getSftsForAddress(address))
                 }
             }
         }

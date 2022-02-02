@@ -26,13 +26,15 @@ fun Routing.tokenRoutes() {
             }
         }
 
-        get("/tokens/{address}") {
-            val address = call.parameters["address"]
-            if (address.isNullOrEmpty()) {
+        get("/tokens/{identifier}") {
+            val identifier = call.parameters["identifier"]
+            if (identifier.isNullOrEmpty()) {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
                 withContext(Dispatchers.IO) {
-                    call.respond(TokenRepository.getTokensForAddress(address))
+                    TokenRepository.getTokenWithId(identifier)?.let {
+                        call.respond(it)
+                    } ?: call.response.status(HttpStatusCode.NotFound)
                 }
             }
         }
@@ -43,13 +45,15 @@ fun Routing.tokenRoutes() {
             }
         }
 
-        get("/nfts/{address}") {
-            val address = call.parameters["address"]
-            if (address.isNullOrEmpty()) {
+        get("/nfts/{identifier}") {
+            val identifier = call.parameters["identifier"]
+            if (identifier.isNullOrEmpty()) {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
                 withContext(Dispatchers.IO) {
-                    call.respond(TokenRepository.getNftsForAddress(address))
+                    TokenRepository.getNftWithId(identifier)?.let {
+                        call.respond(it)
+                    } ?: call.response.status(HttpStatusCode.NotFound)
                 }
             }
         }
@@ -60,13 +64,15 @@ fun Routing.tokenRoutes() {
             }
         }
 
-        get("/sfts/{address}") {
-            val address = call.parameters["address"]
-            if (address.isNullOrEmpty()) {
+        get("/sfts/{identifier}") {
+            val identifier = call.parameters["identifier"]
+            if (identifier.isNullOrEmpty()) {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
                 withContext(Dispatchers.IO) {
-                    call.respond(TokenRepository.getSftsForAddress(address))
+                    TokenRepository.getSftWithId(identifier)?.let {
+                        call.respond(it)
+                    } ?: call.response.status(HttpStatusCode.NotFound)
                 }
             }
         }

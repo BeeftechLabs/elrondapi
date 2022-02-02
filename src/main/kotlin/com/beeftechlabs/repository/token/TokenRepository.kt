@@ -97,6 +97,9 @@ object TokenRepository {
         endCustomTrace("TokensForAddress:$address")
     }
 
+    suspend fun getTokenWithId(id: String): TokenProperties? =
+        AllTokens.cached().value.firstOrNull { it.identifier == id }
+
     suspend fun getNftsForAddress(address: String): List<Token> = coroutineScope {
         startCustomTrace("NftsForAddress:$address")
         val esdtsDeferred =
@@ -122,6 +125,9 @@ object TokenRepository {
         endCustomTrace("NftsForAddress:$address")
     }
 
+    suspend fun getNftWithId(id: String): TokenProperties? =
+        AllNfts.cached().value.firstOrNull { it.identifier == id }
+
     suspend fun getSftsForAddress(address: String): List<Token> = coroutineScope {
         startCustomTrace("SftsForAddress:$address")
         val esdtsDeferred =
@@ -146,6 +152,9 @@ object TokenRepository {
     }.also {
         endCustomTrace("SftsForAddress:$address")
     }
+
+    suspend fun getSftWithId(id: String): TokenProperties? =
+        AllSfts.cached().value.firstOrNull { it.identifier == id }
 
     private suspend fun getTokenProperties(id: String, collection: String? = null): TokenProperties {
         val response = GatewayService.vmQuery(
