@@ -1062,6 +1062,8 @@ definitions:
         $ref: '#/definitions/TokenProperties'
       second:
         $ref: '#/definitions/TokenProperties'
+      address:
+        type: "string"
 
   Node:
     type: "object"

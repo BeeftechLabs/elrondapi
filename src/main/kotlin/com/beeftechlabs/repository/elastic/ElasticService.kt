@@ -10,6 +10,7 @@ import co.elastic.clients.transport.rest_client.RestClientTransport
 import com.beeftechlabs.config
 import com.beeftechlabs.plugins.endCustomTrace
 import com.beeftechlabs.plugins.startCustomTrace
+import com.beeftechlabs.repository.elastic.model.ElasticItem
 import com.beeftechlabs.repository.elastic.model.ElasticResult
 import com.beeftechlabs.util.suspending
 import org.apache.http.HttpHost
@@ -38,12 +39,12 @@ object ElasticService {
             .build()
     }
     private val transport by lazy { RestClientTransport(restClient, JacksonJsonpMapper()) }
-    private val esClient by lazy { ElasticsearchAsyncClient(transport) }
+    val esClient by lazy { ElasticsearchAsyncClient(transport) }
 
-    suspend fun <T> executeQuery(query: Query, clazz: Class<T>): ElasticResult<T> {
-        val size = minOf(query.pageSize, config.maxPageSize)
+    suspend inline fun <reified T> executeQuery(init: Query.() -> Unit): ElasticResult<T> {
+        val query = Query().apply(init)
 
-        startCustomTrace("$query:$clazz")
+        startCustomTrace("$query:${T::class}")
 
         val searchRequest = SearchRequest.Builder()
             .index(query.index)
@@ -66,21 +67,22 @@ object ElasticService {
                         }
                     }
                 }
-            }.size(size)
+            }.size(query.pageSize)
             .build()
 
-        val result = esClient.search(searchRequest, clazz).suspending()
-        val data = result.hits().hits().mapNotNull { it.source() }
+        val result = esClient.search(searchRequest, T::class.java).suspending()
+        val data: List<ElasticItem<T>> =
+            result.hits().hits().mapNotNull { hit -> hit.source()?.let { ElasticItem(hit.id(), it) } }
 
-        endCustomTrace("$query:$clazz")
+        endCustomTrace("$query:${T::class}")
 
         return ElasticResult(
             data = data,
-            hasMore = data.size == size
+            hasMore = data.size == query.pageSize
         )
     }
 
-    private fun BoolQuery.Builder.add(field: QueryField): BoolQuery.Builder =
+    fun BoolQuery.Builder.add(field: QueryField): BoolQuery.Builder =
         when (field.type) {
             QueryFieldType.Should ->
                 field.children.fold(this) { builder, subfield ->

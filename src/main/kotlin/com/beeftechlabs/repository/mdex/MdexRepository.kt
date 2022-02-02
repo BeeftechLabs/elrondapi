@@ -3,8 +3,10 @@ package com.beeftechlabs.repository.mdex
 import com.beeftechlabs.cache.CacheType
 import com.beeftechlabs.cache.withCache
 import com.beeftechlabs.config
+import com.beeftechlabs.model.address.Address
 import com.beeftechlabs.model.mdex.TokenPair
 import com.beeftechlabs.repository.elastic.*
+import com.beeftechlabs.repository.elastic.model.ElasticScResult
 import com.beeftechlabs.repository.elastic.model.ElasticTransaction
 import com.beeftechlabs.repository.token.AllTokens
 import com.beeftechlabs.util.fromBase64String
@@ -22,37 +24,57 @@ object MdexRepository {
 
     suspend fun getAllPairs(): List<TokenPair> = coroutineScope {
         val createTransactionsDeferred = async(Dispatchers.IO) {
-            ElasticService.executeQuery(
-                elasticQuery {
-                    index = "transactions"
-                    must {
-                        term {
-                            name = "receiver"
-                            value = elrondConfig.mdexPair
-                        }
-                        prefix {
-                            name = "data"
-                            value = CREATE_PAIR
-                        }
+            ElasticService.executeQuery<ElasticTransaction> {
+                index = "transactions"
+                must {
+                    term {
+                        name = "receiver"
+                        value = elrondConfig.mdexPair
                     }
-                    sort {
-                        field = "timestamp"
-                        ascending = false
+                    prefix {
+                        name = "data"
+                        value = CREATE_PAIR
                     }
-                    pageSize = 100
-                },
-                ElasticTransaction::class.java
-            )
+                }
+                sort {
+                    field = "timestamp"
+                    ascending = false
+                }
+                pageSize = 1000
+            }
         }
-        val allTokens = withContext(Dispatchers.IO) { AllTokens.cached() }.value.associateBy { it.identifier }
+        val allTokensDeferred = async(Dispatchers.IO) { AllTokens.cached() }
+
         val createTransactions = createTransactionsDeferred.await()
 
-        createTransactions.data.mapNotNull { t ->
-            t.data?.fromBase64String()?.let { data ->
+        val createScResultsDeferred = async(Dispatchers.IO) {
+            ElasticService.executeQuery<ElasticScResult> {
+                index = "scresults"
+                filter {
+                    name = "originalTxHash"
+                    createTransactions.data.map { it.id }.map { hash ->
+                        filter {
+                            value = hash
+                        }
+                    }
+                }
+                pageSize = 10000
+            }
+        }
+
+        val allTokens = allTokensDeferred.await().value.associateBy { it.identifier }
+
+        val createScResults = createScResultsDeferred.await().data.map { it.item }.groupBy { it.originalTxHash }
+
+        createTransactions.data.filter { it.item.status == "success" }.mapNotNull { t ->
+            t.item.data?.fromBase64String()?.let { data ->
                 val (_, firstId, secondId) = data.split("@")
                     .mapIndexed { index, arg -> if (index > 0) arg.fromHexString() else arg }
                 letAll(allTokens[firstId], allTokens[secondId]) { (first, second) ->
-                    TokenPair(first, second)
+                    createScResults[t.id]?.firstOrNull()?.data?.fromBase64String()?.split("@")?.lastOrNull()
+                        ?.let { addressHex ->
+                            TokenPair(first, second, Address(addressHex).erd)
+                        }
                 }
             }
         }
