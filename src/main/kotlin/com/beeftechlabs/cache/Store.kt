@@ -40,4 +40,5 @@ enum class CacheType(val ttl: Duration) {
     AddressTotalRewards(5.minutes),
     Nfts(24.hours),
     Sfts(24.hours),
+    TokenPairs(24.hours),
 }

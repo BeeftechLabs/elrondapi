@@ -23,7 +23,8 @@ data class Elrond(
     val delegationManager: String,
     val staking: String,
     val auction: String,
-    val esdt: String
+    val esdt: String,
+    val mdexPair: String
 )
 
 data class Redis(

@@ -66,6 +66,9 @@ tags:
     description: |
       <SchemaDefinition schemaRef="#/components/schemas/NetworkStatus" />
 
+  - name: "mdex"
+    description: "Utilities for Maiar Exchange"
+
 x-tagGroups:
   - name: Endpoints
     tags:
@@ -194,7 +197,7 @@ paths:
             type: "array"
             items:
               $ref: "#/definitions/TransactionsResponse"
-              
+
   /transactions/{address}:
     get:
       tags:
@@ -720,6 +723,25 @@ paths:
           schema:
             $ref: "#/definitions/NetworkStatus"
 
+  /mdex/tokenPairs:
+    get:
+      tags:
+        - "mdex"
+      summary: "Get registered Token Pairs"
+      description: "Get all Token Pairs created using the Elrond Pair SC."
+      operationId: "getTokenPairs"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/TokenPair"
+
 components:
   schemas:
     Transaction:
@@ -1032,6 +1054,14 @@ definitions:
         type: "boolean"
       wiped:
         type: "string"
+
+  TokenPair:
+    type: "object"
+    properties:
+      first:
+        $ref: '#/definitions/TokenProperties'
+      second:
+        $ref: '#/definitions/TokenProperties'
 
   Node:
     type: "object"

@@ -29,6 +29,7 @@ private fun ApplicationRequest.key() = "$${host()}:${path()}"
 
 fun startCustomTrace(key: String) {
     if (config.traceCalls) {
+        logger.trace { "Started trace $key" }
         startTimestamps[key] = getTimeMillis()
     }
 }
@@ -42,6 +43,4 @@ fun endCustomTrace(key: String) {
     }
 }
 
-private val logger = KotlinLogging.logger("TRACE")
-
-private fun String.appendigThread() = "$this:${Thread.currentThread().name}"
+private val logger = KotlinLogging.logger("")
