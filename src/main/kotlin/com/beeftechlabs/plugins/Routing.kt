@@ -34,7 +34,6 @@ fun Application.configureRouting() {
     routing {
         static {
             resource("/", "index.html")
-            resource("*", "index.html")
             resource("/favicon.ico", "favicon.ico")
             resource("/openapi.yaml", "openapi.yaml")
         }
