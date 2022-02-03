@@ -1,34 +1,55 @@
 package com.beeftechlabs.repository.elastic
 
+import com.beeftechlabs.repository.elastic.QueryField.*
+
 data class Query(
     var index: String = "",
-    val query: MutableList<QueryField> = mutableListOf(),
+    val query: MutableList<QueryField<*>> = mutableListOf(),
     var sort: QuerySort = QuerySort(),
-    var pageSize: Int = 20
+    var size: Int = 20
 ) {
-    fun initQueryField(field: QueryField, init: QueryField.() -> Unit) {
+    inline fun <reified R : QueryField<*>> initQueryField(field: R, init: R.() -> Unit) {
         field.init()
         query.add(field)
     }
 
-    fun hasSort() = sort.field.isNotEmpty()
+    fun hasSort() = sort.name.isNotEmpty()
 }
 
-data class QueryField(
-    val type: QueryFieldType,
-    var name: String = "",
-    var value: String = "",
-    val children: MutableList<QueryField> = mutableListOf()
-) {
-    fun initQueryField(field: QueryField, init: QueryField.() -> Unit) {
+sealed class QueryField<T>(var type: QueryFieldType = QueryFieldType.Bool) {
+    var name: String = ""
+    var value: T = this.initValue()
+    val children: MutableList<QueryField<*>> = mutableListOf()
+
+    protected abstract fun initValue(): T
+
+    inline fun <reified R : QueryField<*>> initQueryField(field: R, init: R.() -> Unit) {
         field.init()
         children.add(field)
     }
+
+    class StringQueryField(type: QueryFieldType) : QueryField<String>(type) {
+        override fun initValue(): String = ""
+    }
+
+    class LongQueryField(type: QueryFieldType) : QueryField<Long>(type) {
+        override fun initValue(): Long = 0
+    }
+
+    class RangeQueryField(type: QueryFieldType) : QueryField<Long>(type) {
+        override fun initValue(): Long = 0
+
+        var direction: RangeDirection = RangeDirection.Gte
+    }
 }
 
+enum class RangeDirection { Gt, Gte, Lt, Lte }
+
+enum class SortOrder { Asc, Desc }
+
 data class QuerySort(
-    var field: String = "",
-    var ascending: Boolean = true
+    var name: String = "",
+    var order: SortOrder = SortOrder.Asc
 )
 
 enum class QueryFieldType { Term, Prefix, Filter, Should, Must, Bool }
@@ -39,21 +60,29 @@ fun elasticQuery(init: Query.() -> Unit): Query {
     return query
 }
 
-private fun Query.field(type: QueryFieldType, init: QueryField.() -> Unit) = initQueryField(QueryField(type), init)
-fun Query.term(init: QueryField.() -> Unit) = field(QueryFieldType.Term, init)
-fun Query.prefix(init: QueryField.() -> Unit) = field(QueryFieldType.Prefix, init)
-fun Query.filter(init: QueryField.() -> Unit) = field(QueryFieldType.Filter, init)
-fun Query.should(init: QueryField.() -> Unit) = field(QueryFieldType.Should, init)
-fun Query.must(init: QueryField.() -> Unit) = field(QueryFieldType.Must, init)
-fun Query.bool(init: QueryField.() -> Unit) = field(QueryFieldType.Bool, init)
+private inline fun <reified T : QueryField<*>> Query.field(type: QueryFieldType, init: T.() -> Unit) =
+    initQueryField(T::class.java.getConstructor(QueryFieldType::class.java).newInstance(type), init)
 
-private fun QueryField.field(type: QueryFieldType, init: QueryField.() -> Unit) = initQueryField(QueryField(type), init)
-fun QueryField.term(init: QueryField.() -> Unit) = field(QueryFieldType.Term, init)
-fun QueryField.prefix(init: QueryField.() -> Unit) = field(QueryFieldType.Prefix, init)
-fun QueryField.filter(init: QueryField.() -> Unit) = field(QueryFieldType.Filter, init)
-fun QueryField.should(init: QueryField.() -> Unit) = field(QueryFieldType.Should, init)
-fun QueryField.must(init: QueryField.() -> Unit) = field(QueryFieldType.Must, init)
-fun QueryField.bool(init: QueryField.() -> Unit) = field(QueryFieldType.Bool, init)
+fun Query.term(init: StringQueryField.() -> Unit) = field(QueryFieldType.Term, init)
+fun Query.longTerm(init: LongQueryField.() -> Unit) = field(QueryFieldType.Term, init)
+fun Query.prefix(init: StringQueryField.() -> Unit) = field(QueryFieldType.Prefix, init)
+fun Query.filter(init: StringQueryField.() -> Unit) = field(QueryFieldType.Filter, init)
+fun Query.filterRange(init: RangeQueryField.() -> Unit) = field(QueryFieldType.Filter, init)
+fun Query.should(init: StringQueryField.() -> Unit) = field(QueryFieldType.Should, init)
+fun Query.must(init: StringQueryField.() -> Unit) = field(QueryFieldType.Must, init)
+fun Query.bool(init: StringQueryField.() -> Unit) = field(QueryFieldType.Bool, init)
+
+private inline fun <reified T : QueryField<*>> QueryField<*>.field(type: QueryFieldType, init: T.() -> Unit) =
+    initQueryField(T::class.java.getConstructor(QueryFieldType::class.java).newInstance(type), init)
+
+fun QueryField<*>.term(init: StringQueryField.() -> Unit) = field(QueryFieldType.Term, init)
+fun QueryField<*>.longTerm(init: LongQueryField.() -> Unit) = field(QueryFieldType.Term, init)
+fun QueryField<*>.prefix(init: StringQueryField.() -> Unit) = field(QueryFieldType.Prefix, init)
+fun QueryField<*>.filter(init: StringQueryField.() -> Unit) = field(QueryFieldType.Filter, init)
+fun QueryField<*>.filterRange(init: RangeQueryField.() -> Unit) = field(QueryFieldType.Filter, init)
+fun QueryField<*>.should(init: StringQueryField.() -> Unit) = field(QueryFieldType.Should, init)
+fun QueryField<*>.must(init: StringQueryField.() -> Unit) = field(QueryFieldType.Must, init)
+fun QueryField<*>.bool(init: StringQueryField.() -> Unit) = field(QueryFieldType.Bool, init)
 
 fun Query.sort(init: QuerySort.() -> Unit) {
     sort.init()

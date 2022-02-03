@@ -2,11 +2,9 @@ package com.beeftechlabs.repository.elastic
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient
 import co.elastic.clients.elasticsearch._types.FieldValue
-import co.elastic.clients.elasticsearch._types.SortOrder
 import co.elastic.clients.elasticsearch._types.Time
 import co.elastic.clients.elasticsearch.core.OpenPointInTimeRequest
 import co.elastic.clients.elasticsearch.core.SearchRequest
-import co.elastic.clients.json.JsonData
 import co.elastic.clients.json.jackson.JacksonJsonpMapper
 import co.elastic.clients.transport.rest_client.RestClientTransport
 import com.beeftechlabs.config
@@ -15,17 +13,19 @@ import com.beeftechlabs.model.address.AddressesResponse
 import com.beeftechlabs.model.address.SimpleAddressDetails
 import com.beeftechlabs.model.core.Delegator
 import com.beeftechlabs.model.core.StakingProvider
-import com.beeftechlabs.model.token.TokenRequest
-import com.beeftechlabs.model.token.TokenResponse
 import com.beeftechlabs.model.token.Value
 import com.beeftechlabs.model.transaction.*
 import com.beeftechlabs.plugins.endCustomTrace
 import com.beeftechlabs.plugins.startCustomTrace
 import com.beeftechlabs.processing.TransactionProcessor
 import com.beeftechlabs.repository.address.model.AddressSort
-import com.beeftechlabs.repository.elastic.model.*
+import com.beeftechlabs.repository.elastic.model.ElasticAddress
+import com.beeftechlabs.repository.elastic.model.ElasticDelegation
+import com.beeftechlabs.repository.elastic.model.ElasticScResult
+import com.beeftechlabs.repository.elastic.model.ElasticTransaction
 import com.beeftechlabs.util.suspending
-import kotlinx.coroutines.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.apache.http.HttpHost
 import org.apache.http.auth.AuthScope
 import org.apache.http.auth.UsernamePasswordCredentials
@@ -90,73 +90,55 @@ object ElasticRepository {
     suspend fun getTransactions(request: TransactionsRequest): TransactionsResponse {
         startCustomTrace("GetTransactionsFromElastic:${request.address}")
         startCustomTrace("GetTransactionsFullyFromElastic:${request.address}")
-        val size = minOf(request.pageSize, config.maxPageSize)
-        val searchRequest = SearchRequest.Builder()
-            .index("transactions")
-            .apply {
-                if (request.address.isNotEmpty() || request.startTimestamp > 0) {
-                    query { q ->
-                        q.bool { b ->
-                            b.must { m ->
-                                if (request.address.isNotEmpty()) {
-                                    m.bool { b ->
-                                        b.should { s ->
-                                            s.term { t ->
-                                                t.field("sender")
-                                                    .value { v -> v.stringValue(request.address) }
-                                            }
-                                        }
-                                            .should { s ->
-                                                s.term { t ->
-                                                    t.field("receiver")
-                                                        .value { v -> v.stringValue(request.address) }
-                                                }
-                                            }
-                                    }
-                                } else {
-                                    m
-                                }
-                            }.apply {
-                                if (request.startTimestamp > 0) {
-                                    filter { f ->
-                                        f.range { r ->
-                                            r.field("timestamp")
-                                                .apply {
-                                                    if (request.newer) {
-                                                        gte(JsonData.of(request.startTimestamp))
-                                                    } else {
-                                                        lte(JsonData.of(request.startTimestamp))
-                                                    }
-                                                }
-                                        }
-                                    }
-                                }
-                            }
+        val maxSize = minOf(request.pageSize, config.maxPageSize)
+
+        val result = ElasticService.executeQuery<ElasticTransaction> {
+            index = "transactions"
+            size = maxSize
+            must {
+                bool {
+                    should {
+                        term {
+                            name = "sender"
+                            value = request.address
+                        }
+                        term {
+                            name = "receiver"
+                            value = request.address
                         }
                     }
                 }
             }
-            .sort { sort ->
-                sort.field { field ->
-                    field.field("timestamp")
-                        .order(SortOrder.Desc)
+            if (request.startTimestamp > 0) {
+                filterRange {
+                    name = "timestamp"
+                    value = request.startTimestamp
+                    direction = if (request.newer) RangeDirection.Gte else RangeDirection.Lte
                 }
             }
-            .size(size)
-            .build()
+            sort {
+                name = "timestamp"
+                order = SortOrder.Desc
+            }
+        }
 
-        val response = esClient.search(searchRequest, ElasticTransaction::class.java).suspending()
-        val transactions = response.hits().hits().mapNotNull { hit ->
-            hit.source()?.toTransaction(hit.id())
+        val transactions = result.data.map { t ->
+            t.item.toTransaction(t.id)
         }
         endCustomTrace("GetTransactionsFromElastic:${request.address}")
 
+        val maxTs = transactions.maxOf { it.timestamp }
+        val minTs = transactions.minOf { it.timestamp }
+
         val updatedTransactions = if (request.includeScResults || request.processTransactions) {
-            startCustomTrace("GetTransactionsScResultsFromElastic:${request.address}")
-
             var transactionsWithScResults = transactions
+            startCustomTrace("GetTransactionsScResultsFaster:${request.address}")
+            val allScResults = getScResultsForQuery(request, minTs, maxTs)
+            endCustomTrace("GetTransactionsScResultsFaster:${request.address}")
 
-            val allScResults = getScResultsForTransactionsOneRequest(transactions.filter { it.hasScResults }.map { it.hash })
+//            startCustomTrace("GetTransactionsScResultsFromElastic:${request.address}")
+//            val allScResults = getScResultsForTransactionsOneRequest(transactions.filter { it.hasScResults }.map { it.hash })
+//            endCustomTrace("GetTransactionsScResultsFromElastic:${request.address}")
 
             allScResults.groupBy { it.originalTxHash }.forEach { entry ->
                 transactionsWithScResults = transactionsWithScResults.map {
@@ -167,7 +149,6 @@ object ElasticRepository {
                     }
                 }
             }
-            endCustomTrace("GetTransactionsScResultsFromElastic:${request.address}")
 
             transactionsWithScResults
         } else {
@@ -186,9 +167,9 @@ object ElasticRepository {
         }
 
         return TransactionsResponse(
-            transactions.size == size,
+            transactions.size == maxSize,
             if (transactions.isNotEmpty()) {
-                if (request.newer) transactions.maxOf { it.timestamp } else transactions.minOf { it.timestamp }
+                if (request.newer) maxTs else minTs
             } else {
                 request.startTimestamp
             },
@@ -216,7 +197,7 @@ object ElasticRepository {
             .sort { sort ->
                 sort.field { field ->
                     field.field("timestamp")
-                        .order(SortOrder.Asc)
+                        .order(co.elastic.clients.elasticsearch._types.SortOrder.Asc)
                 }
             }
             .size(10000)
@@ -228,39 +209,58 @@ object ElasticRepository {
         }
     }
 
-    private suspend fun getScResultsForTransaction(hashes: List<String>): List<ScResult> {
-        return coroutineScope {
-            hashes.map { async(Dispatchers.IO) { getScResultsForTransaction(it) } }.awaitAll().flatten()
-        }
-    }
-
-    private suspend fun getScResultsForTransaction(hash: String): List<ScResult> {
-        val searchRequest = SearchRequest.Builder()
-            .index("scresults")
-            .query { q ->
-                q.bool { b ->
-                    b.filter { f ->
-                        f.term { t ->
-                            t.field("originalTxHash")
-                                .value { v ->
-                                    v.stringValue(hash)
-                                }
+    private suspend fun getScResultsForQuery(request: TransactionsRequest, minTs: Long, maxTs: Long): List<ScResult> {
+        val result = ElasticService.executeQuery<ElasticScResult> {
+            index = "scresults"
+            size = 10000
+            must {
+                bool {
+                    should {
+                        term {
+                            name = "sender"
+                            value = request.address
+                        }
+                        term {
+                            name = "receiver"
+                            value = request.address
                         }
                     }
                 }
             }
-            .sort { sort ->
-                sort.field { field ->
-                    field.field("timestamp")
-                        .order(SortOrder.Asc)
+            filterRange {
+                name = "timestamp"
+                filterRange {
+                    value = minTs
+                    direction = RangeDirection.Gte
+                }
+                filterRange {
+                    value = maxTs
+                    direction = RangeDirection.Lte
                 }
             }
-            .size(1000)
-            .build()
+        }
 
-        val response = esClient.search(searchRequest, ElasticScResult::class.java).suspending()
-        return response.hits().hits().mapNotNull { hit ->
-            hit.source()?.toScResult(hit.id())
+        return result.data.map { elasticScResult ->
+            elasticScResult.item.toScResult(elasticScResult.id)
+        }
+    }
+
+    private suspend fun getScResultsForTransaction(hash: String): List<ScResult> {
+        val result = ElasticService.executeQuery<ElasticScResult> {
+            index = "scresults"
+            size = 100
+            filter {
+                name = "originalTxHash"
+                value = hash
+            }
+            sort {
+                name = "timestamp"
+                order = SortOrder.Asc
+            }
+        }
+
+        return result.data.map { elasticScResult ->
+            elasticScResult.item.toScResult(elasticScResult.id)
         }
     }
 
@@ -318,48 +318,6 @@ object ElasticRepository {
         }
     }
 
-    suspend fun getTokens(request: TokenRequest): TokenResponse {
-        val searchRequest = SearchRequest.Builder()
-            .index("tokens")
-            .query { q ->
-                q.bool { b ->
-                    b.apply {
-                        request.timestamp?.let {
-                            filter { f ->
-                                f.range { r ->
-                                    r.field("timestamp")
-                                        .apply {
-                                            if (request.newer) {
-                                                gte(JsonData.of(request.timestamp))
-                                            } else {
-                                                lte(JsonData.of(request.timestamp))
-                                            }
-                                        }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            .size(request.size)
-            .sort { sort ->
-                sort.field { field ->
-                    field.field("timestamp")
-                        .order(if (request.newer) SortOrder.Desc else SortOrder.Asc)
-                }
-            }
-            .build()
-
-        val response = esClient.search(searchRequest, ElasticToken::class.java).suspending()
-        val tokens = response.hits().hits().mapNotNull { it.source() }
-
-        return TokenResponse(
-            tokens = tokens,
-            hasMore = tokens.size == request.size,
-            lastTimestamp = tokens.firstOrNull()?.timestamp
-        )
-    }
-
     suspend fun getAddressesPaged(
         sort: AddressSort,
         requestedPageSize: Int,
@@ -368,7 +326,9 @@ object ElasticRepository {
         startingWith: String?
     ): AddressesResponse {
         val pitId = requestId ?: createPit("accounts")
-        val pageSize = minOf(requestedPageSize, config.maxPageSize)
+        val maxSize = minOf(requestedPageSize, config.maxPageSize)
+
+        // TODO: switch this to ElasticService DSL (add PIT support to it)
 
         val searchRequest = SearchRequest.Builder()
             .apply {
@@ -388,14 +348,14 @@ object ElasticRepository {
             .sort { s ->
                 s.field { f ->
                     when (sort) {
-                        AddressSort.AddressAsc -> f.field("_id").order(SortOrder.Asc)
-                        AddressSort.AddressDesc -> f.field("_id").order(SortOrder.Desc)
-                        AddressSort.BalanceAsc -> f.field("balanceNum").order(SortOrder.Asc)
-                        AddressSort.BalanceDesc -> f.field("balanceNum").order(SortOrder.Desc)
+                        AddressSort.AddressAsc -> f.field("_id").order(co.elastic.clients.elasticsearch._types.SortOrder.Asc)
+                        AddressSort.AddressDesc -> f.field("_id").order(co.elastic.clients.elasticsearch._types.SortOrder.Desc)
+                        AddressSort.BalanceAsc -> f.field("balanceNum").order(co.elastic.clients.elasticsearch._types.SortOrder.Asc)
+                        AddressSort.BalanceDesc -> f.field("balanceNum").order(co.elastic.clients.elasticsearch._types.SortOrder.Desc)
                     }
                 }
             }
-            .size(pageSize)
+            .size(maxSize)
             .pit { p ->
                 p.id(pitId).keepAlive(DEFAULT_PIT_LENGTH)
             }
@@ -429,7 +389,7 @@ object ElasticRepository {
                         balance = Value(it.balance, it.balanceNum, "EGLD")
                     )
                 },
-                hasMore = addresses.size == pageSize,
+                hasMore = addresses.size == maxSize,
                 requestId = response.pitId() ?: pitId,
                 firstResult = firstResult,
                 lastResult = lastResult

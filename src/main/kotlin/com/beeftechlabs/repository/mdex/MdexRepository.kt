@@ -38,10 +38,10 @@ object MdexRepository {
                     }
                 }
                 sort {
-                    field = "timestamp"
-                    ascending = false
+                    name = "timestamp"
+                    order = SortOrder.Asc
                 }
-                pageSize = 1000
+                size = 1000
             }
         }
         val allTokensDeferred = async(Dispatchers.IO) { AllTokens.cached() }
@@ -59,7 +59,7 @@ object MdexRepository {
                         }
                     }
                 }
-                pageSize = 10000
+                size = 10000
             }
         }
 
