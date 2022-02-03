@@ -1,12 +1,16 @@
 package com.beeftechlabs.repository.elastic
 
 import com.beeftechlabs.repository.elastic.QueryField.*
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 data class Query(
     var index: String = "",
     val query: MutableList<QueryField<*>> = mutableListOf(),
     var sort: QuerySort = QuerySort(),
-    var size: Int = 20
+    var size: Int = 20,
+    var pit: QueryPit? = null,
+    var searchAfter: String = ""
 ) {
     inline fun <reified R : QueryField<*>> initQueryField(field: R, init: R.() -> Unit) {
         field.init()
@@ -14,6 +18,10 @@ data class Query(
     }
 
     fun hasSort() = sort.name.isNotEmpty()
+
+    fun hasSearchAfter() = searchAfter.isNotEmpty()
+
+    fun hasPit() = pit != null
 }
 
 sealed class QueryField<T>(var type: QueryFieldType = QueryFieldType.Bool) {
@@ -52,7 +60,12 @@ data class QuerySort(
     var order: SortOrder = SortOrder.Asc
 )
 
-enum class QueryFieldType { Term, Prefix, Filter, Should, Must, Bool }
+data class QueryPit(
+    var id: String = "",
+    var length: Duration = 1.minutes
+)
+
+enum class QueryFieldType { Term, Prefix, Filter, Should, Must, Bool, Regex }
 
 fun elasticQuery(init: Query.() -> Unit): Query {
     val query = Query()
@@ -71,6 +84,7 @@ fun Query.filterRange(init: RangeQueryField.() -> Unit) = field(QueryFieldType.F
 fun Query.should(init: StringQueryField.() -> Unit) = field(QueryFieldType.Should, init)
 fun Query.must(init: StringQueryField.() -> Unit) = field(QueryFieldType.Must, init)
 fun Query.bool(init: StringQueryField.() -> Unit) = field(QueryFieldType.Bool, init)
+fun Query.regex(init: StringQueryField.() -> Unit) = field(QueryFieldType.Regex, init)
 
 private inline fun <reified T : QueryField<*>> QueryField<*>.field(type: QueryFieldType, init: T.() -> Unit) =
     initQueryField(T::class.java.getConstructor(QueryFieldType::class.java).newInstance(type), init)
@@ -83,7 +97,12 @@ fun QueryField<*>.filterRange(init: RangeQueryField.() -> Unit) = field(QueryFie
 fun QueryField<*>.should(init: StringQueryField.() -> Unit) = field(QueryFieldType.Should, init)
 fun QueryField<*>.must(init: StringQueryField.() -> Unit) = field(QueryFieldType.Must, init)
 fun QueryField<*>.bool(init: StringQueryField.() -> Unit) = field(QueryFieldType.Bool, init)
+fun QueryField<*>.regex(init: StringQueryField.() -> Unit) = field(QueryFieldType.Regex, init)
 
 fun Query.sort(init: QuerySort.() -> Unit) {
     sort.init()
+}
+
+fun Query.pit(init: QueryPit.() -> Unit) {
+    pit = QueryPit().apply(init)
 }

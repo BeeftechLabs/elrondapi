@@ -1,12 +1,5 @@
 package com.beeftechlabs.repository.elastic
 
-import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient
-import co.elastic.clients.elasticsearch._types.FieldValue
-import co.elastic.clients.elasticsearch._types.Time
-import co.elastic.clients.elasticsearch.core.OpenPointInTimeRequest
-import co.elastic.clients.elasticsearch.core.SearchRequest
-import co.elastic.clients.json.jackson.JacksonJsonpMapper
-import co.elastic.clients.transport.rest_client.RestClientTransport
 import com.beeftechlabs.config
 import com.beeftechlabs.model.address.AddressDelegation
 import com.beeftechlabs.model.address.AddressesResponse
@@ -23,68 +16,37 @@ import com.beeftechlabs.repository.elastic.model.ElasticAddress
 import com.beeftechlabs.repository.elastic.model.ElasticDelegation
 import com.beeftechlabs.repository.elastic.model.ElasticScResult
 import com.beeftechlabs.repository.elastic.model.ElasticTransaction
-import com.beeftechlabs.util.suspending
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.apache.http.HttpHost
-import org.apache.http.auth.AuthScope
-import org.apache.http.auth.UsernamePasswordCredentials
-import org.apache.http.impl.client.BasicCredentialsProvider
-import org.elasticsearch.client.RestClient
+import kotlin.time.Duration.Companion.minutes
 
 object ElasticRepository {
 
-    private val elasticConfig by lazy { config.elastic!! }
-
-    private val credentialsProvider = BasicCredentialsProvider().apply {
-        setCredentials(
-            AuthScope.ANY, UsernamePasswordCredentials(
-                elasticConfig.username, elasticConfig.password
-            )
-        )
-    }
-
-    private val restClient by lazy {
-        RestClient.builder(HttpHost.create(elasticConfig.url))
-            .setHttpClientConfigCallback { builder ->
-                builder.setDefaultCredentialsProvider(credentialsProvider)
-            }
-            .build()
-    }
-    private val transport by lazy { RestClientTransport(restClient, JacksonJsonpMapper()) }
-    private val esClient by lazy { ElasticsearchAsyncClient(transport) }
-
     suspend fun getTransaction(hash: String, process: Boolean): Transaction? {
         startCustomTrace("GetSingleTransactionFromElastic:$hash")
-        val searchRequest = SearchRequest.Builder()
-            .index("transactions")
-            .query { q ->
-                q.bool { b ->
-                    b.must { m ->
-                        m.term { t ->
-                            t.field("_id")
-                                .value { v -> v.stringValue(hash) }
-                        }
-                    }
-                }
-            }
-            .build()
 
-        val response = esClient.search(searchRequest, ElasticTransaction::class.java).suspending()
-        val transaction =
-            response.hits().hits().firstNotNullOfOrNull { hit -> hit.source()?.let { Pair(hit.id(), it) } }
-                ?.let { (hash, et) ->
-                    et.toTransaction(hash)
+        val result = ElasticService.executeQuery<ElasticTransaction> {
+            index = "transactions"
+            must {
+                term {
+                    name = "_id"
+                    value = hash
                 }
-        endCustomTrace("GetSingleTransactionFromElastic:$hash")
-
-        if (transaction != null && process) {
-            startCustomTrace("GetSingleTransactionScResultsFromElastic:$hash")
-            return transaction.copy(scResults = getScResultsForTransaction(hash)).also {
-                endCustomTrace("GetSingleTransactionScResultsFromElastic:$hash")
             }
         }
-        return transaction
+
+        return result.data.firstOrNull()?.let { etransaction ->
+            val transaction = etransaction.item.toTransaction(etransaction.id)
+
+            if (process) {
+                startCustomTrace("GetSingleTransactionScResultsFromElastic:$hash")
+                transaction.copy(scResults = getScResultsForTransaction(hash)).also {
+                    endCustomTrace("GetSingleTransactionScResultsFromElastic:$hash")
+                }
+            } else {
+                transaction
+            }
+        }
     }
 
     suspend fun getTransactions(request: TransactionsRequest): TransactionsResponse {
@@ -136,10 +98,6 @@ object ElasticRepository {
             val allScResults = getScResultsForQuery(request, minTs, maxTs)
             endCustomTrace("GetTransactionsScResultsFaster:${request.address}")
 
-//            startCustomTrace("GetTransactionsScResultsFromElastic:${request.address}")
-//            val allScResults = getScResultsForTransactionsOneRequest(transactions.filter { it.hasScResults }.map { it.hash })
-//            endCustomTrace("GetTransactionsScResultsFromElastic:${request.address}")
-
             allScResults.groupBy { it.originalTxHash }.forEach { entry ->
                 transactionsWithScResults = transactionsWithScResults.map {
                     if (it.hash == entry.key) {
@@ -176,36 +134,6 @@ object ElasticRepository {
             processedTransactions
         ).also {
             endCustomTrace("GetTransactionsFullyFromElastic:${request.address}")
-        }
-    }
-
-    private suspend fun getScResultsForTransactionsOneRequest(hashes: List<String>): List<ScResult> {
-        val searchRequest = SearchRequest.Builder()
-            .index("scresults")
-            .query { q ->
-                q.bool { b ->
-                    b.filter { f ->
-                        f.terms { t ->
-                            t.field("originalTxHash")
-                                .terms { t2 ->
-                                    t2.value(hashes.map { FieldValue.of(it) })
-                                }
-                        }
-                    }
-                }
-            }
-            .sort { sort ->
-                sort.field { field ->
-                    field.field("timestamp")
-                        .order(co.elastic.clients.elasticsearch._types.SortOrder.Asc)
-                }
-            }
-            .size(10000)
-            .build()
-
-        val response = esClient.search(searchRequest, ElasticScResult::class.java).suspending()
-        return response.hits().hits().mapNotNull { hit ->
-            hit.source()?.toScResult(hit.id())
         }
     }
 
@@ -265,56 +193,42 @@ object ElasticRepository {
     }
 
     suspend fun getDelegations(address: String): List<AddressDelegation> {
-        val searchRequest = SearchRequest.Builder()
-            .index("delegators")
-            .query { q ->
-                q.bool { b ->
-                    b.must { m ->
-                        m.term { t ->
-                            t.field("address")
-                                .value { v -> v.stringValue(address) }
-                        }
-                    }
+        val result = ElasticService.executeQuery<ElasticDelegation> {
+            index = "delegators"
+            must {
+                term {
+                    name = "address"
+                    value = address
                 }
             }
-            .build()
+        }
 
-        val response = esClient.search(searchRequest, ElasticDelegation::class.java).suspending()
-        return response.hits().hits().mapNotNull { hit ->
-            hit.source()?.let { delegation ->
-                AddressDelegation(
-                    stakingProvider = StakingProvider(address = delegation.contract, ""),
-                    value = Value.extract(delegation.activeStake, "EGLD"),
-                    claimable = Value.None,
-                    totalRewards = Value.None
-                )
-            }
+        return result.data.map { delegation ->
+            AddressDelegation(
+                stakingProvider = StakingProvider(address = delegation.item.contract, ""),
+                value = Value.extract(delegation.item.activeStake, "EGLD"),
+                claimable = Value.None,
+                totalRewards = Value.None
+            )
         }
     }
 
     suspend fun getDelegators(contractAddress: String): List<Delegator> {
-        val searchRequest = SearchRequest.Builder()
-            .index("delegators")
-            .query { q ->
-                q.bool { b ->
-                    b.must { m ->
-                        m.term { t ->
-                            t.field("contract")
-                                .value { v -> v.stringValue(contractAddress) }
-                        }
-                    }
+        val result = ElasticService.executeQuery<ElasticDelegation> {
+            index = "delegators"
+            must {
+                term {
+                    name = "contract"
+                    value = contractAddress
                 }
             }
-            .build()
+        }
 
-        val response = esClient.search(searchRequest, ElasticDelegation::class.java).suspending()
-        return response.hits().hits().mapNotNull { hit ->
-            hit.source()?.let { delegation ->
-                Delegator(
-                    address = delegation.address,
-                    value = Value.extract(delegation.activeStake, "EGLD")
-                )
-            }
+        return result.data.map { delegation ->
+            Delegator(
+                address = delegation.item.address,
+                value = Value.extract(delegation.item.activeStake, "EGLD")
+            )
         }
     }
 
@@ -325,50 +239,33 @@ object ElasticRepository {
         requestId: String?,
         startingWith: String?
     ): AddressesResponse {
-        val pitId = requestId ?: createPit("accounts")
         val maxSize = minOf(requestedPageSize, config.maxPageSize)
 
-        // TODO: switch this to ElasticService DSL (add PIT support to it)
-
-        val searchRequest = SearchRequest.Builder()
-            .apply {
-                if (filter != null) {
-                    query { q ->
-                        q.bool { b ->
-                            b.filter { f ->
-                                f.regexp { r ->
-                                    r.field("address")
-                                        .value(".*$filter.*")
-                                }
-                            }
-                        }
+        val result = ElasticService.executeQuery<ElasticAddress> {
+            index = "accounts"
+            size = maxSize
+            if (filter != null) {
+                filter {
+                    regex {
+                        name = "address"
+                        value = ".*$filter.*"
                     }
                 }
             }
-            .sort { s ->
-                s.field { f ->
-                    when (sort) {
-                        AddressSort.AddressAsc -> f.field("_id").order(co.elastic.clients.elasticsearch._types.SortOrder.Asc)
-                        AddressSort.AddressDesc -> f.field("_id").order(co.elastic.clients.elasticsearch._types.SortOrder.Desc)
-                        AddressSort.BalanceAsc -> f.field("balanceNum").order(co.elastic.clients.elasticsearch._types.SortOrder.Asc)
-                        AddressSort.BalanceDesc -> f.field("balanceNum").order(co.elastic.clients.elasticsearch._types.SortOrder.Desc)
-                    }
-                }
+            when (sort) {
+                AddressSort.AddressAsc -> sort { name = "_id"; order = SortOrder.Asc }
+                AddressSort.AddressDesc -> sort { name = "_id"; order = SortOrder.Desc }
+                AddressSort.BalanceAsc -> sort { name = "balanceNum"; order = SortOrder.Asc }
+                AddressSort.BalanceDesc -> sort { name = "balanceNum"; order = SortOrder.Desc }
             }
-            .size(maxSize)
-            .pit { p ->
-                p.id(pitId).keepAlive(DEFAULT_PIT_LENGTH)
+            pit {
+                id = requestId ?: ""
+                length = 1.minutes
             }
-//            .trackTotalHits(TrackHits.Builder().enabled(false).build())
-            .apply {
-                if (startingWith != null) {
-                    searchAfter(startingWith)
-                }
-            }
-            .build()
+            startingWith?.let { searchAfter = it }
+        }
 
-        val response = esClient.search(searchRequest, ElasticAddress::class.java).suspending()
-        val addresses = response.hits().hits().mapNotNull { it.source() }
+        val addresses = result.data.map { it.item }
 
         if (addresses.isNotEmpty()) {
 
@@ -390,7 +287,7 @@ object ElasticRepository {
                     )
                 },
                 hasMore = addresses.size == maxSize,
-                requestId = response.pitId() ?: pitId,
+                requestId = result.pitId,
                 firstResult = firstResult,
                 lastResult = lastResult
             )
@@ -401,11 +298,4 @@ object ElasticRepository {
             )
         }
     }
-
-    private suspend fun createPit(index: String, keepAlive: Time = DEFAULT_PIT_LENGTH): String =
-        esClient.openPointInTime(
-            OpenPointInTimeRequest.Builder().index(index).keepAlive(keepAlive).build()
-        ).suspending().id()
-
-    private val DEFAULT_PIT_LENGTH = Time.Builder().time("1m").build()
 }

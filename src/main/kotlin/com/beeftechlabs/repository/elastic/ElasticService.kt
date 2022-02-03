@@ -3,8 +3,10 @@ package com.beeftechlabs.repository.elastic
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient
 import co.elastic.clients.elasticsearch._types.FieldValue
 import co.elastic.clients.elasticsearch._types.SortOrder
+import co.elastic.clients.elasticsearch._types.Time
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery
 import co.elastic.clients.elasticsearch._types.query_dsl.RangeQuery
+import co.elastic.clients.elasticsearch.core.OpenPointInTimeRequest
 import co.elastic.clients.elasticsearch.core.SearchRequest
 import co.elastic.clients.json.JsonData
 import co.elastic.clients.json.jackson.JacksonJsonpMapper
@@ -21,6 +23,7 @@ import org.apache.http.auth.AuthScope
 import org.apache.http.auth.UsernamePasswordCredentials
 import org.apache.http.impl.client.BasicCredentialsProvider
 import org.elasticsearch.client.RestClient
+import kotlin.time.Duration
 
 object ElasticService {
 
@@ -49,8 +52,14 @@ object ElasticService {
 
         startCustomTrace("$query:${T::class}")
 
+        var pitId: String? = null
+
         val searchRequest = SearchRequest.Builder()
-            .index(query.index)
+            .apply {
+                if (!query.hasPit()) {
+                    index(query.index)
+                }
+            }
             .apply {
                 if (query.query.isNotEmpty()) {
                     query { builder ->
@@ -73,11 +82,24 @@ object ElasticService {
                         }
                     }
                 }
-            }.size(query.size)
+            }.apply {
+                query.pit?.let { pitConfig ->
+                    pitId = pitConfig.id.takeIf { it.isNotEmpty() } ?: createPit(query.index, pitConfig.length)
+                    pit { pit ->
+                        pit.id(pitId)
+                            .keepAlive(Time.Builder().time("${pitConfig.length.inWholeMinutes}m").build())
+                    }
+                }
+            }.apply {
+                if (query.hasSearchAfter()) {
+                    searchAfter(query.searchAfter)
+                }
+            }
+            .size(query.size)
             .build()
 
         if (config.traceCalls) {
-            println(searchRequest.serializeBody(transport))
+            println("Querying index ${query.index}: ${searchRequest.serializeBody(transport)}")
         }
 
         val result = esClient.search(searchRequest, T::class.java).suspending()
@@ -88,7 +110,8 @@ object ElasticService {
 
         return ElasticResult(
             data = data,
-            hasMore = data.size == query.size
+            hasMore = data.size == query.size,
+            pitId = pitId
         )
     }
 
@@ -130,7 +153,16 @@ object ElasticService {
                         }
                         is QueryField.StringQueryField -> {
                             if (field.children.isNotEmpty()) {
-                                filter.terms { terms ->
+                                field.children.filter { it.type == QueryFieldType.Regex }.firstOrNull()?.let { regexField ->
+                                    filter.regexp { regex ->
+                                        regex.field(regexField.name).value(
+                                            when (regexField) {
+                                                is QueryField.StringQueryField -> regexField.value
+                                                else -> throw IllegalArgumentException()
+                                            }
+                                        )
+                                    }
+                                } ?: filter.terms { terms ->
                                     terms.field(field.name)
                                         .terms { values ->
                                             values.value(field.children.map { child ->
@@ -192,6 +224,13 @@ object ElasticService {
                 bool { bool -> field.children.fold(bool) { builder, subfield -> builder.add(subfield) } }
             else -> throw IllegalArgumentException("Cannot place ${field.type} here")
         }
+
+    suspend fun createPit(index: String, length: Duration): String {
+        val keepAlive = Time.Builder().time("${length.inWholeMinutes}m").build()
+        return esClient.openPointInTime(
+            OpenPointInTimeRequest.Builder().index(index).keepAlive(keepAlive).build()
+        ).suspending().id()
+    }
 }
 
 private inline fun <reified T> RangeQuery.Builder.directionToElastic(direction: RangeDirection, value: T) =
