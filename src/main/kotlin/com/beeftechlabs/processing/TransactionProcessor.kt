@@ -81,7 +81,8 @@ object TransactionProcessor {
     private fun parseESDTNFTTransfer(transaction: Transaction, args: List<String>): Transaction {
         val outValues = listOf(extractESDTNFTTransferValue(args))
 
-        val otherAddress = if (transaction.receiver == transaction.sender) Address(args[4]).erd else transaction.receiver
+        val otherAddress =
+            if (transaction.receiver == transaction.sender) Address(args[4]).erd else transaction.receiver
 
         val relevantScResults = transaction.scResults
             .filter { it.receiver == transaction.sender }
@@ -127,7 +128,8 @@ object TransactionProcessor {
     private fun parseMultiESDTNFTTransfer(transaction: Transaction, args: List<String>): Transaction {
         val outValues = extractMultiESDTNFTTransferValue(args)
 
-        val otherAddress = if (transaction.receiver == transaction.sender) Address(args[1]).erd else transaction.receiver
+        val otherAddress =
+            if (transaction.receiver == transaction.sender) Address(args[1]).erd else transaction.receiver
 
         val relevantScResults = transaction.scResults
             .filter { it.receiver == transaction.sender }
@@ -168,37 +170,37 @@ object TransactionProcessor {
     }
 
     private fun parseOtherTransactions(transaction: Transaction, args: List<String>): Transaction {
-        var value: Value? = null
+        var outValue: Value? = null
         val transactionType: TransactionType
         val function = args.firstOrNull()
 
         val relevantScResults = transaction.scResults
             .filter { it.receiver == transaction.sender }
             .map { it.copy(data = it.data.fromBase64String()) }
-        val inValues = extractAllESDTTransferTypeValues(relevantScResults).groupedByToken()
+        var inValues = extractAllESDTTransferTypeValues(relevantScResults).groupedByToken()
 
         when (function) {
             "delegate", "stake" -> {
-                value = transaction.transactionValue
+                outValue = transaction.transactionValue
                 transactionType = TransactionType.Delegate
             }
             "modifyTotalDelegationCap" -> {
-                value = args.getOrNull(1)?.let { Value.extractHex(it, "EGLD") } ?: Value.None
+                outValue = args.getOrNull(1)?.let { Value.extractHex(it, "EGLD") } ?: Value.None
                 transactionType = TransactionType.ModifyDelegationCap
             }
             "claimRewards" -> {
                 transaction.scResults.firstOrNull { it.data.isEmpty() }?.let {
-                    value = Value.extract(it.value, "EGLD")
+                    inValues = listOf(Value.extract(it.value, "EGLD"))
                 }
                 transactionType = TransactionType.Claim
             }
             "unDelegate", "unStake" -> {
-                value = args.getOrNull(1)?.let { Value.extractHex(it, "EGLD") } ?: Value.None
+                outValue = args.getOrNull(1)?.let { Value.extractHex(it, "EGLD") } ?: Value.None
                 transactionType = TransactionType.Undelegate
             }
             "reDelegateRewards" -> {
                 transaction.scResults.firstOrNull { it.data.isEmpty() }?.let {
-                    value = Value.extract(it.value, "EGLD")
+                    outValue = Value.extract(it.value, "EGLD")
                 }
                 transactionType = TransactionType.Compound
             }
@@ -206,21 +208,22 @@ object TransactionProcessor {
                 transaction.scResults
                     .filter { it.receiver == transaction.sender }
                     .firstOrNull { it.data.isEmpty() }?.let {
-                        value = Value.extract(it.value, "EGLD")
+                        inValues = listOf(Value.extract(it.value, "EGLD"))
                     }
                 transactionType = TransactionType.Withdraw
             }
             "changeServiceFee" -> {
-                value = args.getOrNull(1)?.let { Value.extractHex(it, "EGLD") } ?: Value.None
+                outValue = args.getOrNull(1)
+                    ?.let { Value("", it.toIntOrNull(16)?.toDouble(), "") } ?: Value.None
                 transactionType = TransactionType.ChangeServiceFee
             }
             "wrapEgld" -> {
-                value = transaction.transactionValue
+                outValue = transaction.transactionValue
                 transactionType = TransactionType.Wrap
             }
             else -> {
                 if (transaction.sender == METACHAIN) {
-                    value = transaction.transactionValue
+                    outValue = transaction.transactionValue
                     transactionType = TransactionType.ReceiveValidationReward
                 } else {
                     // SC Call
@@ -230,7 +233,7 @@ object TransactionProcessor {
         }
 
         return transaction.copy(
-            outValues = listOfNotNull(value),
+            outValues = listOfNotNull(outValue),
             inValues = inValues,
             type = transactionType,
             function = function
@@ -279,19 +282,21 @@ object TransactionProcessor {
         try {
             val numTokens = args[2].toInt(16)
 
-            return (1..numTokens).map { Value.extractHex(args[3 * it + 2], args[3 * it].tokenFromArg()) }.also { values ->
-                if (values.contains(Value.None)) {
-                    logger.error { "Error while parsing MultiESDTNFTTransfer values from $args" }
+            return (1..numTokens).map { Value.extractHex(args[3 * it + 2], args[3 * it].tokenFromArg()) }
+                .also { values ->
+                    if (values.contains(Value.None)) {
+                        logger.error { "Error while parsing MultiESDTNFTTransfer values from $args" }
+                    }
                 }
-            }
         } catch (ignored: Exception) {
             val numTokens = args[1].toInt(16)
 
-            return (1..numTokens).map { Value.extractHex(args[3 * it + 1], args[3 * it - 1].tokenFromArg()) }.also { values ->
-                if (values.contains(Value.None)) {
-                    logger.error { "Error while parsing MultiESDTNFTTransfer values from $args" }
+            return (1..numTokens).map { Value.extractHex(args[3 * it + 1], args[3 * it - 1].tokenFromArg()) }
+                .also { values ->
+                    if (values.contains(Value.None)) {
+                        logger.error { "Error while parsing MultiESDTNFTTransfer values from $args" }
+                    }
                 }
-            }
         }
     }
 

@@ -52,7 +52,7 @@ object ElasticService {
 
         startCustomTrace("$query:${T::class}")
 
-        var pitId: String? = null
+        var pitId: String?
 
         val searchRequest = SearchRequest.Builder()
             .apply {
@@ -111,7 +111,7 @@ object ElasticService {
         return ElasticResult(
             data = data,
             hasMore = data.size == query.size,
-            pitId = pitId
+            pitId = result.pitId()
         )
     }
 
@@ -153,7 +153,7 @@ object ElasticService {
                         }
                         is QueryField.StringQueryField -> {
                             if (field.children.isNotEmpty()) {
-                                field.children.filter { it.type == QueryFieldType.Regex }.firstOrNull()?.let { regexField ->
+                                field.children.firstOrNull { it.type == QueryFieldType.Regex }?.let { regexField ->
                                     filter.regexp { regex ->
                                         regex.field(regexField.name).value(
                                             when (regexField) {

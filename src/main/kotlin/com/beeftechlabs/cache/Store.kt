@@ -6,6 +6,7 @@ import kotlinx.coroutines.launch
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 inline fun <reified T> tryCache(key: String, ttl: Duration): T? {
     return InMemoryStore.get(key, ttl)
@@ -33,11 +34,11 @@ enum class CacheType(val ttl: Duration) {
     Nodes(1.hours),
     NetworkConfig(5.minutes),
     NetworkStatus(5.minutes),
-    AddressDelegations(5.minutes),
-    AddressDelegationsVm(5.minutes),
-    AddressUndelegations(5.minutes),
-    AddressClaimable(5.minutes),
-    AddressTotalRewards(5.minutes),
+    AddressDelegations(30.seconds),
+    AddressDelegationsVm(30.seconds),
+    AddressUndelegations(30.seconds),
+    AddressClaimable(30.seconds),
+    AddressTotalRewards(24.hours),
     Nfts(24.hours),
     Sfts(24.hours),
     TokenPairs(24.hours),
