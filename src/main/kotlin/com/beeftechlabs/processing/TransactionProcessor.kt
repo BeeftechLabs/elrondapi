@@ -134,7 +134,7 @@ object TransactionProcessor {
         val relevantScResults = transaction.scResults
             .filter { it.receiver == transaction.sender }
             .map { it.copy(data = it.data.fromBase64String()) }
-        val inValues = extractAllESDTTransferTypeValues(relevantScResults).groupedByToken()
+        var inValues = extractAllESDTTransferTypeValues(relevantScResults).groupedByToken()
 
         val transactionType: TransactionType
 
@@ -156,6 +156,11 @@ object TransactionProcessor {
             else -> {
                 // some MultiESDT SC call
                 transactionType = TransactionType.SmartContract
+
+                // I think there's a bug somewhere in an SC for mergeLockedAssetTokens
+                if (relevantScResults.all { it.data.endsWith("@657865637574696f6e206661696c6564") }) { // execution failed
+                    inValues = outValues
+                }
             }
         }
 

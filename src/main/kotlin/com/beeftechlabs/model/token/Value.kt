@@ -54,7 +54,7 @@ data class Value(
             try {
                 Value(
                     bigNumber = bigNumber.toBigInteger(16).toString(),
-                    denominated = bigNumber.denominatedBigDecimal().toDouble(),
+                    denominated = bigNumber.denominatedBigDecimal().toDouble().takeIf { it.isFinite() },
                     token = token
                 )
             } catch (exception: Exception) {
@@ -66,7 +66,7 @@ data class Value(
             try {
                 Value(
                     bigNumber = bigNumber,
-                    denominated = bigNumber.denominatedBigDecimal(isHex = false).toDouble(),
+                    denominated = bigNumber.denominatedBigDecimal(isHex = false).toDouble().takeIf { it.isFinite() },
                     token = token
                 )
             } catch (exception: Exception) {
@@ -78,7 +78,7 @@ data class Value(
             try {
                 Value(
                     bigNumber = bigNumber.toString(),
-                    denominated = bigNumber.denominated().toDouble(),
+                    denominated = bigNumber.denominated().toDouble().takeIf { it.isFinite() },
                     token = token
                 )
             } catch (exception: Exception) {
