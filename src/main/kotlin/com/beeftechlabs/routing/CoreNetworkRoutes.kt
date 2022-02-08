@@ -27,13 +27,13 @@ fun Routing.coreNetworkRoutes() {
         if (config.hasElastic) {
             get("/nodes") {
                 withContext(Dispatchers.IO) {
-                    call.respond(Nodes.cached().value)
+                    call.respond(Nodes.all().value)
                 }
             }
 
             get("/stakingProviders") {
                 withContext(Dispatchers.IO) {
-                    call.respond(StakingProviders.cached().value)
+                    call.respond(StakingProviders.all().value)
                 }
             }
 

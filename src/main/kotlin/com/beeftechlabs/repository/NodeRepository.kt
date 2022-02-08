@@ -2,6 +2,7 @@ package com.beeftechlabs.repository
 
 import com.beeftechlabs.cache.CacheType
 import com.beeftechlabs.cache.peekCache
+import com.beeftechlabs.cache.putInCache
 import com.beeftechlabs.cache.withCache
 import com.beeftechlabs.config
 import com.beeftechlabs.model.address.Address
@@ -26,7 +27,7 @@ object NodeRepository {
         val cachedBlsKeys = cachedNodes.map { it.blsKey }
         val cachedBlsOwners = cachedNodes.associate { it.blsKey to it.provider }
         val heartbeats: Deferred<NodeHeartbeatResponse> = async { GatewayService.get("node/heartbeatstatus") }
-        val providersDeferred = async { StakingProviders.cached().value }
+        val providersDeferred = async { StakingProviders.all().value }
         val nodes = heartbeats.await().data.heartbeats.map {
             with(it) {
                 Node(
@@ -78,6 +79,10 @@ data class Nodes(
     val value: List<Node>
 ) {
     companion object {
-        suspend fun cached() = withCache(CacheType.Nodes) { NodeRepository.getAllNodes() }
+        suspend fun all(skipCache: Boolean = false) = if (skipCache) {
+            NodeRepository.getAllNodes().also { putInCache(CacheType.Nodes, it) }
+        } else {
+            withCache(CacheType.Nodes) { NodeRepository.getAllNodes() }
+        }
     }
 }

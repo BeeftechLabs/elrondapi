@@ -26,7 +26,7 @@ object InMemoryStore {
     }
 
     fun <T> peek(key: String): T? {
-        return if (config.memoryStore) store[key] as? T else null
+        return if (config.memoryStore) store[key]?.first as? T else null
     }
 
     fun <T> set(key: String, data: T?) {

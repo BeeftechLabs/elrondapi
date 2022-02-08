@@ -31,7 +31,7 @@ data class Transaction(
     val scResults: List<ScResult>
 )
 
-fun ElasticTransaction.toTransaction(hash: String) = Transaction(
+suspend fun ElasticTransaction.toTransaction(hash: String) = Transaction(
     hash, sender, receiver, Value.extract(value, "EGLD"), emptyList(), emptyList(), data ?: "", nonce, gasLimit,
     gasPrice, gasUsed, Value.extract(fee, "EGLD"), timestamp, senderShard, receiverShard,
     tokens ?: emptyList(), esdtValues ?: emptyList(), status, TransactionType.Unknown, "", hasScResults,

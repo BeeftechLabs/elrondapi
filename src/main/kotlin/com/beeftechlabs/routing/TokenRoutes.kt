@@ -1,15 +1,9 @@
 package com.beeftechlabs.routing
 
 import com.beeftechlabs.config
-import com.beeftechlabs.model.network.NetworkConfig
-import com.beeftechlabs.model.network.NetworkStatus
-import com.beeftechlabs.repository.Nodes
-import com.beeftechlabs.repository.StakingProviders
-import com.beeftechlabs.repository.elastic.ElasticRepository
-import com.beeftechlabs.repository.network.cached
-import com.beeftechlabs.repository.token.AllNfts
-import com.beeftechlabs.repository.token.AllSfts
-import com.beeftechlabs.repository.token.AllTokens
+import com.beeftechlabs.repository.token.Nfts
+import com.beeftechlabs.repository.token.Sfts
+import com.beeftechlabs.repository.token.Esdts
 import com.beeftechlabs.repository.token.TokenRepository
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -22,7 +16,7 @@ fun Routing.tokenRoutes() {
     if (config.hasElrondConfig) {
         get("/tokens") {
             withContext(Dispatchers.IO) {
-                call.respond(AllTokens.cached().value)
+                call.respond(Esdts.all().value)
             }
         }
 
@@ -32,7 +26,7 @@ fun Routing.tokenRoutes() {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
                 withContext(Dispatchers.IO) {
-                    TokenRepository.getTokenWithId(identifier)?.let {
+                    TokenRepository.getEsdtWithId(identifier)?.let {
                         call.respond(it)
                     } ?: call.response.status(HttpStatusCode.NotFound)
                 }
@@ -41,7 +35,7 @@ fun Routing.tokenRoutes() {
 
         get("/nfts") {
             withContext(Dispatchers.IO) {
-                call.respond(AllNfts.cached().value)
+                call.respond(Nfts.all().value)
             }
         }
 
@@ -60,7 +54,7 @@ fun Routing.tokenRoutes() {
 
         get("/sfts") {
             withContext(Dispatchers.IO) {
-                call.respond(AllSfts.cached().value)
+                call.respond(Sfts.all().value)
             }
         }
 

@@ -29,7 +29,7 @@ object AddressRepository {
         withStake: Boolean
     ): AddressDetails = coroutineScope {
         startCustomTrace("AddressDetails:$address")
-        val tokens = async { if (withTokens) TokenRepository.getTokensForAddress(address) else null }
+        val tokens = async { if (withTokens) TokenRepository.getEsdtsForAddress(address) else null }
         val nfts = async { if (withNfts) TokenRepository.getNftsForAddress(address) else null }
         val sfts = async { if (withSfts) TokenRepository.getSftsForAddress(address) else null }
         val delegations = async { if (withDelegations) StakingRepository.getDelegations(address) else null }

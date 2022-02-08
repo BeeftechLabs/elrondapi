@@ -1,7 +1,7 @@
 package com.beeftechlabs.routing
 
 import com.beeftechlabs.config
-import com.beeftechlabs.repository.mdex.AllTokenPairs
+import com.beeftechlabs.repository.mdex.TokenPairs
 import com.beeftechlabs.repository.mdex.MdexRepository
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -14,7 +14,7 @@ fun Routing.mdexRoutes() {
     if (config.hasElrondConfig) {
         get("/mdex/tokenPairs") {
             withContext(Dispatchers.IO) {
-                call.respond(AllTokenPairs.cached().value)
+                call.respond(TokenPairs.all().value)
             }
         }
 

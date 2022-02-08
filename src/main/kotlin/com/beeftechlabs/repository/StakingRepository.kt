@@ -1,6 +1,7 @@
 package com.beeftechlabs.repository
 
 import com.beeftechlabs.cache.CacheType
+import com.beeftechlabs.cache.putInCache
 import com.beeftechlabs.cache.withCache
 import com.beeftechlabs.config
 import com.beeftechlabs.model.address.Address
@@ -28,7 +29,7 @@ object StakingRepository {
 
     suspend fun getDelegations(address: String): List<AddressDelegation> = coroutineScope {
         startCustomTrace("GetDelegations:$address")
-        val providers = async { StakingProviders.cached().value }
+        val providers = async { StakingProviders.all().value }
         val delegationsDeferred = async {
             withCache(CacheType.AddressDelegations, address) {
                 ElasticRepository.getDelegations(address)
@@ -247,6 +248,10 @@ data class StakingProviders(
     val value: List<StakingProvider>
 ) {
     companion object {
-        suspend fun cached() = withCache(CacheType.StakingProviders) { StakingRepository.getStakingProviders() }
+        suspend fun all(skipCache: Boolean = false) = if (skipCache) {
+            StakingRepository.getStakingProviders().also { putInCache(CacheType.StakingProviders, it) }
+        } else {
+            withCache(CacheType.StakingProviders) { StakingRepository.getStakingProviders() }
+        }
     }
 }

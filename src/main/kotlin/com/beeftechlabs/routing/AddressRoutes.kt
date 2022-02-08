@@ -80,7 +80,7 @@ fun Routing.addressRoutes() {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
                 withContext(Dispatchers.IO) {
-                    call.respond(TokenRepository.getTokensForAddress(address))
+                    call.respond(TokenRepository.getEsdtsForAddress(address))
                 }
             }
         }

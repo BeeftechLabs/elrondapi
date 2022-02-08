@@ -7,12 +7,11 @@ import com.beeftechlabs.model.transaction.Transaction
 import com.beeftechlabs.model.transaction.TransactionType
 import com.beeftechlabs.util.fromBase64String
 import com.beeftechlabs.util.fromHexString
-import com.beeftechlabs.util.tokenFromArg
 import mu.KotlinLogging
 
 object TransactionProcessor {
 
-    fun process(transaction: Transaction): Transaction {
+    suspend fun process(transaction: Transaction): Transaction {
         return if (!transaction.isScCall && !transaction.hasScResults) {
             transaction.copy(
                 type = TransactionType.Transfer,
@@ -40,7 +39,7 @@ object TransactionProcessor {
         }
     }
 
-    private fun parseESDTTransfer(transaction: Transaction, args: List<String>): Transaction {
+    private suspend fun parseESDTTransfer(transaction: Transaction, args: List<String>): Transaction {
         val outValues = listOf(extractESDTTransferValue(args))
 
         val relevantScResults = transaction.scResults
@@ -78,7 +77,7 @@ object TransactionProcessor {
         )
     }
 
-    private fun parseESDTNFTTransfer(transaction: Transaction, args: List<String>): Transaction {
+    private suspend fun parseESDTNFTTransfer(transaction: Transaction, args: List<String>): Transaction {
         val outValues = listOf(extractESDTNFTTransferValue(args))
 
         val otherAddress =
@@ -125,7 +124,7 @@ object TransactionProcessor {
         )
     }
 
-    private fun parseMultiESDTNFTTransfer(transaction: Transaction, args: List<String>): Transaction {
+    private suspend fun parseMultiESDTNFTTransfer(transaction: Transaction, args: List<String>): Transaction {
         val outValues = extractMultiESDTNFTTransferValue(args)
 
         val otherAddress =
@@ -174,7 +173,7 @@ object TransactionProcessor {
         )
     }
 
-    private fun parseOtherTransactions(transaction: Transaction, args: List<String>): Transaction {
+    private suspend fun parseOtherTransactions(transaction: Transaction, args: List<String>): Transaction {
         var outValue: Value? = null
         val transactionType: TransactionType
         val function = args.firstOrNull()
@@ -245,7 +244,7 @@ object TransactionProcessor {
         )
     }
 
-    private fun extractAllESDTTransferTypeValues(scResults: List<ScResult>): List<Value> {
+    private suspend fun extractAllESDTTransferTypeValues(scResults: List<ScResult>): List<Value> {
         return scResults.filter { it.data.isRelevantTransfer() }.mapNotNull { scResult ->
             val data = scResult.data
             val scArgs = data.split("@")
@@ -266,28 +265,28 @@ object TransactionProcessor {
             }
         }
 
-    private fun extractESDTTransferValue(data: String): Value =
+    private suspend fun extractESDTTransferValue(data: String): Value =
         extractESDTTransferValue(data.split("@"))
 
-    private fun extractESDTTransferValue(args: List<String>): Value {
-        return Value.extractHex(args[2], args[1].tokenFromArg())
+    private suspend fun extractESDTTransferValue(args: List<String>): Value {
+        return Value.extractHex(args[2], args[1].fromHexString())
     }
 
-    private fun extractESDTNFTTransferValue(data: String): Value =
+    private suspend fun extractESDTNFTTransferValue(data: String): Value =
         extractESDTNFTTransferValue(data.split("@"))
 
-    private fun extractESDTNFTTransferValue(args: List<String>): Value {
-        return Value.extractHex(args[3], args[1].tokenFromArg())
+    private suspend fun extractESDTNFTTransferValue(args: List<String>): Value {
+        return Value.extractHex(args[3], args[1].fromHexString())
     }
 
-    private fun extractMultiESDTNFTTransferValue(data: String): List<Value> =
+    private suspend fun extractMultiESDTNFTTransferValue(data: String): List<Value> =
         extractMultiESDTNFTTransferValue(data.split("@"))
 
-    private fun extractMultiESDTNFTTransferValue(args: List<String>): List<Value> {
+    private suspend fun extractMultiESDTNFTTransferValue(args: List<String>): List<Value> {
         try {
             val numTokens = args[2].toInt(16)
 
-            return (1..numTokens).map { Value.extractHex(args[3 * it + 2], args[3 * it].tokenFromArg()) }
+            return (1..numTokens).map { Value.extractHex(args[3 * it + 2], args[3 * it].fromHexString()) }
                 .also { values ->
                     if (values.contains(Value.None)) {
                         logger.error { "Error while parsing MultiESDTNFTTransfer values from $args" }
@@ -296,7 +295,7 @@ object TransactionProcessor {
         } catch (ignored: Exception) {
             val numTokens = args[1].toInt(16)
 
-            return (1..numTokens).map { Value.extractHex(args[3 * it + 1], args[3 * it - 1].tokenFromArg()) }
+            return (1..numTokens).map { Value.extractHex(args[3 * it + 1], args[3 * it - 1].fromHexString()) }
                 .also { values ->
                     if (values.contains(Value.None)) {
                         logger.error { "Error while parsing MultiESDTNFTTransfer values from $args" }

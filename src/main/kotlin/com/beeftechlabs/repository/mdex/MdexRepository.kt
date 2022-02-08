@@ -1,6 +1,7 @@
 package com.beeftechlabs.repository.mdex
 
 import com.beeftechlabs.cache.CacheType
+import com.beeftechlabs.cache.putInCache
 import com.beeftechlabs.cache.withCache
 import com.beeftechlabs.config
 import com.beeftechlabs.model.address.Address
@@ -9,7 +10,7 @@ import com.beeftechlabs.model.mdex.TokenPairState
 import com.beeftechlabs.repository.elastic.*
 import com.beeftechlabs.repository.elastic.model.ElasticScResult
 import com.beeftechlabs.repository.elastic.model.ElasticTransaction
-import com.beeftechlabs.repository.token.AllTokens
+import com.beeftechlabs.repository.token.Esdts
 import com.beeftechlabs.service.SCService
 import com.beeftechlabs.util.fromBase64String
 import com.beeftechlabs.util.fromHexString
@@ -21,7 +22,7 @@ import kotlinx.serialization.Serializable
 
 object MdexRepository {
 
-    val elrondConfig by lazy { config.elrond!! }
+    private val elrondConfig by lazy { config.elrond!! }
 
     suspend fun getAllPairs(): List<TokenPair> = coroutineScope {
         val createTransactionsDeferred = async(Dispatchers.IO) {
@@ -44,7 +45,7 @@ object MdexRepository {
                 size = 1000
             }
         }
-        val allTokensDeferred = async(Dispatchers.IO) { AllTokens.cached() }
+        val esdtsDeferred = async(Dispatchers.IO) { Esdts.all() }
 
         val createTransactions = createTransactionsDeferred.await()
 
@@ -63,7 +64,7 @@ object MdexRepository {
             }
         }
 
-        val allTokens = allTokensDeferred.await().value.associateBy { it.identifier }
+        val allTokens = esdtsDeferred.await().value.associateBy { it.identifier }
 
         val createScResults = createScResultsDeferred.await().data.map { it.item }.groupBy { it.originalTxHash }
 
@@ -83,8 +84,8 @@ object MdexRepository {
 
     suspend fun getTokenPairDetails(address: String): TokenPair? = coroutineScope {
         withCache(CacheType.TokenPairDetails, address) {
-            val allPairsDeferred = async(Dispatchers.IO) { AllTokenPairs.cached() }
-            val allTokensDeferred = async(Dispatchers.IO) { AllTokens.cached() }
+            val allPairsDeferred = async(Dispatchers.IO) { TokenPairs.all().value }
+            val esdtsDeferred = async(Dispatchers.IO) { Esdts.all() }
             val totalSupplyDeferred = async(Dispatchers.IO) { SCService.vmQueryBigInt(address, "getTotalSupply") }
             val totalFeePercentDeferred =
                 async(Dispatchers.IO) { SCService.vmQueryDouble(address, "getTotalFeePercent") }
@@ -93,9 +94,9 @@ object MdexRepository {
             val lpTokenDeferred = async(Dispatchers.IO) { SCService.vmQueryString(address, "getLpTokenIdentifier") }
 
             val allPairs = allPairsDeferred.await()
-            val allTokens = allTokensDeferred.await()
+            val allTokens = esdtsDeferred.await()
 
-            allPairs.value.find { it.address == address }?.copy(
+            allPairs.find { it.address == address }?.copy(
                 lpTokenTotalSupply = totalSupplyDeferred.await(),
                 totalFeePercent = totalFeePercentDeferred.await()?.div(1000000),
                 specialFeePercent = specialFeePercentDeferred.await()?.div(1000000),
@@ -110,10 +111,14 @@ object MdexRepository {
 }
 
 @Serializable
-data class AllTokenPairs(
+data class TokenPairs(
     val value: List<TokenPair>
 ) {
     companion object {
-        suspend fun cached() = withCache(CacheType.TokenPairs) { AllTokenPairs(MdexRepository.getAllPairs()) }
+        suspend fun all(skipCache: Boolean = false) = if (skipCache) {
+            TokenPairs(MdexRepository.getAllPairs()).also { putInCache(CacheType.TokenPairs, it) }
+        } else {
+            withCache(CacheType.TokenPairs) { TokenPairs(MdexRepository.getAllPairs()) }
+        }
     }
 }

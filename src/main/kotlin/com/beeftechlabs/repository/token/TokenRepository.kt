@@ -1,6 +1,7 @@
 package com.beeftechlabs.repository.token
 
 import com.beeftechlabs.cache.CacheType
+import com.beeftechlabs.cache.putInCache
 import com.beeftechlabs.cache.withCache
 import com.beeftechlabs.config
 import com.beeftechlabs.model.address.Address
@@ -17,9 +18,7 @@ import com.beeftechlabs.service.GatewayService
 import com.beeftechlabs.util.fromBase64String
 import com.beeftechlabs.util.fromBase64ToHexString
 import com.beeftechlabs.util.toHexString
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import mu.KotlinLogging
 
@@ -27,8 +26,8 @@ object TokenRepository {
 
     private val elrondConfig by lazy { config.elrond!! }
 
-    suspend fun getAllTokens(): AllTokens = coroutineScope {
-        startCustomTrace("AllTokens")
+    suspend fun getAllEsdts(): Esdts = coroutineScope {
+        startCustomTrace("AllEsdts")
         val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/fungible-tokens").data.tokens
 
         val tokenProperties = fungibles.chunked(NUM_PARALLEL_FETCH)
@@ -37,12 +36,12 @@ object TokenRepository {
 
         // todo get assets
 
-        AllTokens(tokenProperties)
+        Esdts(tokenProperties)
     }.also {
-        endCustomTrace("AllTokens")
+        endCustomTrace("AllEsdts")
     }
 
-    suspend fun getAllNfts(): AllNfts = coroutineScope {
+    suspend fun getAllNfts(): Nfts = coroutineScope {
         startCustomTrace("AllNfts")
         val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/non-fungible-tokens").data.tokens
 
@@ -52,12 +51,12 @@ object TokenRepository {
 
         // todo get assets
 
-        AllNfts(tokenProperties)
+        Nfts(tokenProperties)
     }.also {
         endCustomTrace("AllNfts")
     }
 
-    suspend fun getAllSfts(): AllSfts = coroutineScope {
+    suspend fun getAllSfts(): Sfts = coroutineScope {
         startCustomTrace("AllSfts")
         val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/semi-fungible-tokens").data.tokens
 
@@ -67,16 +66,16 @@ object TokenRepository {
 
         // todo get assets
 
-        AllSfts(tokenProperties)
+        Sfts(tokenProperties)
     }.also {
         endCustomTrace("AllSfts")
     }
 
-    suspend fun getTokensForAddress(address: String): List<Token> = coroutineScope {
+    suspend fun getEsdtsForAddress(address: String): List<Token> = coroutineScope {
         startCustomTrace("TokensForAddress:$address")
         val esdtsDeferred =
             async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
-        val tokensDeferred = async { AllTokens.cached() }
+        val tokensDeferred = async { Esdts.all() }
 
         val esdts = esdtsDeferred.await()
         val tokens = tokensDeferred.await().value.associateBy { it.identifier }
@@ -97,14 +96,14 @@ object TokenRepository {
         endCustomTrace("TokensForAddress:$address")
     }
 
-    suspend fun getTokenWithId(id: String): TokenProperties? =
-        AllTokens.cached().value.firstOrNull { it.identifier == id }
+    suspend fun getEsdtWithId(id: String): TokenProperties? =
+        Esdts.all().value.firstOrNull { it.identifier == id }
 
     suspend fun getNftsForAddress(address: String): List<Token> = coroutineScope {
         startCustomTrace("NftsForAddress:$address")
         val esdtsDeferred =
             async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
-        val nftsDeferred = async { AllNfts.cached() }
+        val nftsDeferred = async { Nfts.all() }
 
         val esdts = esdtsDeferred.await()
         val nfts = nftsDeferred.await().value.associateBy { it.identifier }
@@ -126,13 +125,13 @@ object TokenRepository {
     }
 
     suspend fun getNftWithId(id: String): TokenProperties? =
-        AllNfts.cached().value.firstOrNull { it.identifier == id }
+        Nfts.all().value.firstOrNull { it.identifier == id }
 
     suspend fun getSftsForAddress(address: String): List<Token> = coroutineScope {
         startCustomTrace("SftsForAddress:$address")
         val esdtsDeferred =
             async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
-        val sftsDeferred = async { AllSfts.cached() }
+        val sftsDeferred = async { Sfts.all() }
 
         val esdts = esdtsDeferred.await()
         val sfts = sftsDeferred.await().value.associateBy { it.identifier }
@@ -154,7 +153,27 @@ object TokenRepository {
     }
 
     suspend fun getSftWithId(id: String): TokenProperties? =
-        AllSfts.cached().value.firstOrNull { it.identifier == id }
+        Sfts.all().value.firstOrNull { it.identifier == id }
+
+    suspend fun getTokenWithId(id: String): TokenProperties? = coroutineScope {
+        val esdtsDeferred = async { Esdts.all().value }
+        val nftsDeferred = async { Nfts.all().value }
+        val sftsDeferred = async { Sfts.all().value }
+
+        getTokenPropertiesForId(id, esdtsDeferred.await())
+            ?: getTokenPropertiesForId(id, sftsDeferred.await())
+            ?: getTokenPropertiesForId(id, nftsDeferred.await())
+    }
+
+    suspend fun getDecimalsForToken(id: String): Int =
+        if (id == "EGLD") {
+            18
+        } else {
+            getTokenWithId(id)?.decimals ?: 18
+        }
+
+    private fun getTokenPropertiesForId(id: String, tokens: List<TokenProperties>): TokenProperties? =
+        tokens.find { it.identifier == id }
 
     private suspend fun getTokenProperties(id: String, collection: String? = null): TokenProperties {
         val response = GatewayService.vmQuery(
@@ -219,28 +238,40 @@ object TokenRepository {
 }
 
 @Serializable
-data class AllTokens(
+data class Esdts(
     val value: List<TokenProperties>
 ) {
     companion object {
-        suspend fun cached() = withCache(CacheType.Tokens) { TokenRepository.getAllTokens() }
+        suspend fun all(skipCache: Boolean = false) = if (skipCache) {
+            TokenRepository.getAllEsdts().also { putInCache(CacheType.Esdts, it) }
+        } else {
+            withCache(CacheType.Esdts) { TokenRepository.getAllEsdts() }
+        }
     }
 }
 
 @Serializable
-data class AllNfts(
+data class Nfts(
     val value: List<TokenProperties>
 ) {
     companion object {
-        suspend fun cached() = withCache(CacheType.Nfts) { TokenRepository.getAllNfts() }
+        suspend fun all(skipCache: Boolean = false) = if (skipCache) {
+            TokenRepository.getAllNfts().also { putInCache(CacheType.Nfts, it) }
+        } else {
+            withCache(CacheType.Nfts) { TokenRepository.getAllNfts() }
+        }
     }
 }
 
 @Serializable
-data class AllSfts(
+data class Sfts(
     val value: List<TokenProperties>
 ) {
     companion object {
-        suspend fun cached() = withCache(CacheType.Sfts) { TokenRepository.getAllSfts() }
+        suspend fun all(skipCache: Boolean = false) = if (skipCache) {
+            TokenRepository.getAllSfts().also { putInCache(CacheType.Sfts, it) }
+        } else {
+            withCache(CacheType.Sfts) { TokenRepository.getAllSfts() }
+        }
     }
 }
