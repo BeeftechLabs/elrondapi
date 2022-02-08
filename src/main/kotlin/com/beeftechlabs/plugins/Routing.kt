@@ -19,5 +19,6 @@ fun Application.configureRouting() {
         transactionRoutes()
         tokenRoutes()
         mdexRoutes()
+        adminRoutes()
     }
 }

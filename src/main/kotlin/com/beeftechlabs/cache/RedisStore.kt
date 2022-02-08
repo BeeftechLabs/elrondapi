@@ -5,13 +5,14 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import mu.KotlinLogging
-import redis.clients.jedis.JedisPooled
+import redis.clients.jedis.HostAndPort
+import redis.clients.jedis.Jedis
 import redis.clients.jedis.params.SetParams
 import kotlin.time.Duration
 
 object RedisStore {
 
-    val jedis: JedisPooled? by lazy { if (config.redis?.enabled == true) JedisPooled(config.redis.url) else null }
+    val jedis: Jedis? by lazy { if (config.redis?.enabled == true) Jedis(HostAndPort.from(config.redis.url)) else null }
 
     val json = Json {
         prettyPrint = true
@@ -51,6 +52,10 @@ object RedisStore {
             json.encodeToString(data),
             SetParams.setParams().ex(ttl.inWholeSeconds)
         )
+    }
+
+    fun clear() {
+        jedis?.flushAll()
     }
 
     val logger = KotlinLogging.logger {}
