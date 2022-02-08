@@ -29,8 +29,8 @@ suspend inline fun <reified T> withCache(type: CacheType, instance: String = "",
 }
 
 enum class CacheType(val ttl: Duration) {
-    Tokens(24.hours),
-    StakingProviders(24.hours),
+    Tokens(1.hours),
+    StakingProviders(1.hours),
     Nodes(1.hours),
     NetworkConfig(5.minutes),
     NetworkStatus(5.minutes),
@@ -39,8 +39,8 @@ enum class CacheType(val ttl: Duration) {
     AddressUndelegations(30.seconds),
     AddressClaimable(30.seconds),
     AddressTotalRewards(24.hours),
-    Nfts(24.hours),
-    Sfts(24.hours),
-    TokenPairs(24.hours),
+    Nfts(1.hours),
+    Sfts(1.hours),
+    TokenPairs(1.hours),
     TokenPairDetails(5.minutes)
 }
