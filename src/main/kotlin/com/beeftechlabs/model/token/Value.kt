@@ -58,7 +58,7 @@ data class Value(
                     token = token
                 )
             } catch (exception: Exception) {
-                logger.error(exception) { "Error extracting value $bigNumber from hex string" }
+//                logger.error(exception) { "Error extracting value $bigNumber from hex string" }
                 onError?.invoke() ?: None
             }
 
@@ -70,7 +70,7 @@ data class Value(
                     token = token
                 )
             } catch (exception: Exception) {
-                logger.error(exception) { "Error extracting value $bigNumber from string" }
+//                logger.error(exception) { "Error extracting value $bigNumber from string" }
                 onError?.invoke() ?: None
             }
 
@@ -82,7 +82,7 @@ data class Value(
                     token = token
                 )
             } catch (exception: Exception) {
-                logger.error(exception) { "Error extracting value $bigNumber from string" }
+//                logger.error(exception) { "Error extracting value $bigNumber from string" }
                 onError?.invoke() ?: None
             }
 

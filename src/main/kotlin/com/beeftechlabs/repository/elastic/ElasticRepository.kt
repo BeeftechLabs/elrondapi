@@ -89,6 +89,14 @@ object ElasticRepository {
         }
         endCustomTrace("GetTransactionsFromElastic:${request.address}")
 
+        if (transactions.isEmpty()) {
+            return TransactionsResponse(
+                hasMore = false,
+                lastTimestamp = 0,
+                transactions = emptyList()
+            )
+        }
+
         val maxTs = transactions.maxOf { it.timestamp }
         val minTs = transactions.minOf { it.timestamp }
 
