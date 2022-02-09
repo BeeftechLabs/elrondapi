@@ -1086,6 +1086,40 @@ definitions:
         type: "boolean"
       wiped:
         type: "string"
+      assets:
+        $ref: '#/definitions/TokenAssets'
+
+  TokenAssets:
+    type: "object"
+    properties:
+      website:
+        type: "string"
+      description:
+        type: "string"
+      status:
+        type: "string"
+      pngUrl:
+        type: "string"
+      svgUrl:
+        type: "string"
+      social:
+        $ref: '#/definitions/TokenSocialAssets'
+
+  TokenSocialAssets:
+    type: "object"
+    properties:
+      email:
+        type: "string"
+      blog:
+        type: "string"
+      twitter:
+        type: "string"
+      whitepaper:
+        type: "string"
+      coinmarketcap:
+        type: "string"
+      coingecko:
+        type: "string"
 
   TokenPair:
     type: "object"
