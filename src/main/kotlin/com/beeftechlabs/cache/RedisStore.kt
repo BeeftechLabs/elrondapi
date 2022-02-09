@@ -11,7 +11,12 @@ import kotlin.time.Duration
 
 object RedisStore {
 
-    val jedis: JedisPooled? by lazy { if (config.redis?.enabled == true) JedisPooled(config.redis.url) else null }
+    val jedis: JedisPooled? by lazy {
+        if (config.redis?.enabled == true) JedisPooled(
+            config.redis.host,
+            config.redis.port
+        ) else null
+    }
 
     val json = Json {
         prettyPrint = true

@@ -1,5 +1,6 @@
 package com.beeftechlabs.model.token
 
+import com.beeftechlabs.googlestorage.TokenAssets
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -23,5 +24,6 @@ data class TokenProperties(
     val canAddSpecialRoles: Boolean,
     val canTransferNFTCreateRole: Boolean,
     val nftCreateStopped: Boolean,
-    val wiped: String?
+    val wiped: String?,
+    val assets: TokenAssets? = null
 )

@@ -21,6 +21,8 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":googlestorage"))
+
     implementation("io.ktor:ktor-server-core:$ktor_version")
 //    implementation("io.ktor:ktor-locations:2.0.0-eap-271")
     implementation("io.ktor:ktor-server-content-negotiation:$ktor_version")
@@ -39,8 +41,9 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1")
     implementation("com.soywiz.korlibs.krypto:krypto:2.4.12")
     implementation("com.ionspin.kotlin:bignum:0.3.4")
-    implementation("redis.clients:jedis:4.0.1")
+    implementation("redis.clients:jedis:4.1.0")
     implementation("io.github.microutils:kotlin-logging:2.1.21")
+
     testImplementation("io.ktor:ktor-server-tests:$ktor_version")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 }

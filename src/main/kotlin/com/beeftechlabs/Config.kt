@@ -2,16 +2,18 @@ package com.beeftechlabs
 
 data class Config(
     val port: Int,
-    val elastic: Elastic?,
+    val elastic: Elastic? = null,
     val maxPageSize: Int,
-    val elrond: Elrond?,
-    val redis: Redis?,
+    val elrond: Elrond? = null,
+    val redis: Redis? = null,
     val memoryStore: Boolean,
     val secret: String = "",
-    val traceCalls: Boolean = false
+    val traceCalls: Boolean = false,
+    val googleStorage: GoogleStorage? = null
 ) {
     val hasElastic = elastic != null
     val hasElrondConfig = elrond != null
+    val hasGoogleStorage = googleStorage?.enabled == true
 }
 
 data class Elastic(
@@ -31,5 +33,11 @@ data class Elrond(
 
 data class Redis(
     val enabled: Boolean,
-    val url: String
+    val host: String,
+    val port: Int
+)
+
+data class GoogleStorage(
+    val enabled: Boolean,
+    val bucket: String
 )

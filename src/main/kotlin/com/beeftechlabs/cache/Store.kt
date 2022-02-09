@@ -5,6 +5,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
@@ -54,7 +55,8 @@ enum class CacheType(val ttl: Duration, val isAtomic: Boolean) {
     Nfts(1.hours, true),
     Sfts(1.hours, true),
     TokenPairs(1.hours, true),
-    TokenPairDetails(5.minutes, false);
+    TokenPairDetails(5.minutes, false),
+    TokenAssets(1.days, true);
 
     val mutex = Mutex()
 }

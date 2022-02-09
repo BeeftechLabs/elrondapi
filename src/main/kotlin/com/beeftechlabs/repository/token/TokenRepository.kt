@@ -18,7 +18,9 @@ import com.beeftechlabs.service.GatewayService
 import com.beeftechlabs.util.fromBase64String
 import com.beeftechlabs.util.fromBase64ToHexString
 import com.beeftechlabs.util.toHexString
-import kotlinx.coroutines.*
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.Serializable
 import mu.KotlinLogging
 
@@ -30,11 +32,14 @@ object TokenRepository {
         startCustomTrace("AllEsdts")
         val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/fungible-tokens").data.tokens
 
+        val assets = AllTokenAssets.get().value
+
         val tokenProperties = fungibles.chunked(NUM_PARALLEL_FETCH)
             .map { chunk -> chunk.map { async { getTokenProperties(it) } }.awaitAll() }
             .flatten()
+            .map { it.copy(assets = assets[it.identifier]) }
 
-        // todo get assets
+        println(tokenProperties.find { it.identifier.contains("LKFARM") })
 
         Esdts(tokenProperties)
     }.also {
@@ -45,11 +50,14 @@ object TokenRepository {
         startCustomTrace("AllNfts")
         val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/non-fungible-tokens").data.tokens
 
+        val assets = AllTokenAssets.get().value
+
         val tokenProperties = fungibles.chunked(NUM_PARALLEL_FETCH)
             .map { chunk -> chunk.map { async { getTokenProperties(it) } }.awaitAll() }
             .flatten()
+            .map { it.copy(assets = assets[it.identifier]) }
 
-        // todo get assets
+        println(tokenProperties.find { it.identifier.contains("LKFARM") })
 
         Nfts(tokenProperties)
     }.also {
@@ -60,11 +68,14 @@ object TokenRepository {
         startCustomTrace("AllSfts")
         val fungibles = GatewayService.get<FungibleTokenResponse>("network/esdt/semi-fungible-tokens").data.tokens
 
+        val assets = AllTokenAssets.get().value
+
         val tokenProperties = fungibles.chunked(NUM_PARALLEL_FETCH)
             .map { chunk -> chunk.map { async { getTokenProperties(it) } }.awaitAll() }
             .flatten()
+            .map { it.copy(assets = assets[it.identifier]) }
 
-        // todo get assets
+        println(tokenProperties.find { it.identifier.contains("LKFARM") })
 
         Sfts(tokenProperties)
     }.also {
@@ -73,19 +84,23 @@ object TokenRepository {
 
     suspend fun getEsdtsForAddress(address: String): List<Token> = coroutineScope {
         startCustomTrace("TokensForAddress:$address")
-        val esdtsDeferred =
+        val addressEsdtsDeferred =
             async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
-        val tokensDeferred = async { Esdts.all() }
+        val esdtsDeferred = async { Esdts.all() }
 
-        val esdts = esdtsDeferred.await()
-        val tokens = tokensDeferred.await().value.associateBy { it.identifier }
+        val assets = AllTokenAssets.get().value
 
-        esdts.mapNotNull { esdt ->
+        val addressEsdts = addressEsdtsDeferred.await()
+        val esdts = esdtsDeferred.await().value.associateBy { it.identifier }
+
+        addressEsdts.mapNotNull { esdt ->
             val identifierParts = esdt.tokenIdentifier.split("-")
             val commonIdentifier = identifierParts.take(2).joinToString("-")
-            (tokens[commonIdentifier]
+            (esdts[commonIdentifier]
                 ?: getTokenProperties(commonIdentifier)
-                    .takeIf { it.type == TokenType.ESDT || it.type == TokenType.MetaESDT })?.let {
+                    .takeIf { it.type == TokenType.ESDT || it.type == TokenType.MetaESDT }?.copy(
+                        assets = assets[commonIdentifier]
+                    ))?.let {
                 Token(
                     value = Value.extract(esdt.balance, identifierParts.first()),
                     properties = it
