@@ -177,7 +177,8 @@ object StakingRepository {
     ): Value {
         val response = SCService.vmQuery(contract, "getUserActiveStake", listOf(Address(address).hex))
 
-        return response.firstOrNull()?.takeIf { it.isNotEmpty() }?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
+        return response.firstOrNull()?.takeIf { it.isNotEmpty() }
+            ?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
             ?: Value.zeroEgld()
     }
 
@@ -193,7 +194,8 @@ object StakingRepository {
 
         return response.chunked(2).map { (valueBase64, epochsRemainingBase64) ->
             val roundsUntilComplete =
-                ((epochsRemainingBase64.vmQueryToLong() - 1) * networkConfig.roundsPerEpoch) + roundsRemaining
+                (((epochsRemainingBase64.takeIf { it.isNotEmpty() }?.vmQueryToLong()
+                    ?: 1) - 1) * networkConfig.roundsPerEpoch) + roundsRemaining
             val timeLeft = roundsUntilComplete * networkConfig.roundDuration
 
             UndelegatedValue(
@@ -209,7 +211,8 @@ object StakingRepository {
     ): Value {
         val response = SCService.vmQuery(contract, "getClaimableRewards", listOf(Address(address).hex))
 
-        return response.firstOrNull()?.takeIf { it.isNotEmpty() }?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
+        return response.firstOrNull()?.takeIf { it.isNotEmpty() }
+            ?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
             ?: Value.zeroEgld()
     }
 
@@ -219,16 +222,19 @@ object StakingRepository {
     ): Value {
         val response = SCService.vmQuery(contract, "getTotalCumulatedRewardsForUser", listOf(Address(address).hex))
 
-        return response.firstOrNull()?.takeIf { it.isNotEmpty() }?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
+        return response.firstOrNull()?.takeIf { it.isNotEmpty() }
+            ?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
             ?: Value.zeroEgld()
     }
 
     suspend fun getStaked(address: String): Pair<Value?, List<Unstaked>> = coroutineScope {
         val addressHex = Address(address).hex
         val stakedResponse = async { SCService.vmQuery(elrondConfig.auction, "getTotalStaked", listOf(addressHex)) }
-        val unstakedResponse = async { SCService.vmQuery(elrondConfig.auction, "getUnStakedTokensList", listOf(addressHex)) }
+        val unstakedResponse =
+            async { SCService.vmQuery(elrondConfig.auction, "getUnStakedTokensList", listOf(addressHex)) }
 
-        val staked = stakedResponse.await().firstOrNull()?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") } ?: Value.zeroEgld()
+        val staked = stakedResponse.await().firstOrNull()?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
+            ?: Value.zeroEgld()
         val unstaked = unstakedResponse.await()
             .chunked(2).map { (value, epochsRemaining) ->
                 Unstaked(

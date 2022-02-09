@@ -39,8 +39,6 @@ object TokenRepository {
             .flatten()
             .map { it.copy(assets = assets[it.identifier]) }
 
-        println(tokenProperties.find { it.identifier.contains("LKFARM") })
-
         Esdts(tokenProperties)
     }.also {
         endCustomTrace("AllEsdts")
@@ -57,8 +55,6 @@ object TokenRepository {
             .flatten()
             .map { it.copy(assets = assets[it.identifier]) }
 
-        println(tokenProperties.find { it.identifier.contains("LKFARM") })
-
         Nfts(tokenProperties)
     }.also {
         endCustomTrace("AllNfts")
@@ -74,8 +70,6 @@ object TokenRepository {
             .map { chunk -> chunk.map { async { getTokenProperties(it) } }.awaitAll() }
             .flatten()
             .map { it.copy(assets = assets[it.identifier]) }
-
-        println(tokenProperties.find { it.identifier.contains("LKFARM") })
 
         Sfts(tokenProperties)
     }.also {

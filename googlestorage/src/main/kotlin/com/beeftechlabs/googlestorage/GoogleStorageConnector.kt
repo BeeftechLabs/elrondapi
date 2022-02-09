@@ -4,7 +4,6 @@ import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
-import java.util.concurrent.TimeUnit
 
 class GoogleStorageConnector(private val bucket: String) {
 
@@ -21,21 +20,10 @@ class GoogleStorageConnector(private val bucket: String) {
             return null
         }
 
-        val pngUrl = baseBucket.get("$assetPath/logo.png").signUrl(
-            1,
-            TimeUnit.DAYS,
-            Storage.SignUrlOption.withV4Signature()
-        )
-
-        val svgUrl = baseBucket.get("$assetPath/logo.svg").signUrl(
-            1,
-            TimeUnit.DAYS,
-            Storage.SignUrlOption.withV4Signature()
-        )
-
+        val baseImgPath = "https://storage.googleapis.com/$bucket/$assetPath"
         return assets.copy(
-            pngUrl = pngUrl.toString(),
-            svgUrl = svgUrl.toString()
+            pngUrl = "$baseImgPath/logo.png",
+            svgUrl = "$baseImgPath/logo.svg"
         )
     }
 
