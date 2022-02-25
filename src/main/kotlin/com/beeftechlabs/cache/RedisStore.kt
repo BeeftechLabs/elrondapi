@@ -5,17 +5,25 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import mu.KotlinLogging
-import redis.clients.jedis.JedisPooled
+import redis.clients.jedis.JedisPool
+import redis.clients.jedis.JedisPoolConfig
 import redis.clients.jedis.params.SetParams
 import kotlin.time.Duration
 
 object RedisStore {
 
-    val jedis: JedisPooled? by lazy {
-        if (config.redis?.enabled == true) JedisPooled(
-            config.redis.host,
-            config.redis.port
-        ) else null
+    val jedisPool: JedisPool? by lazy {
+        if (config.redis?.enabled == true) {
+            JedisPool(
+                JedisPoolConfig().apply {
+                    maxTotal = 128
+                },
+                config.redis.host,
+                config.redis.port
+            )
+        } else {
+            null
+        }
     }
 
     val json = Json {
@@ -25,41 +33,47 @@ object RedisStore {
     }
 
     inline fun <reified T> get(key: String): T? {
-        return jedis?.let { jedis ->
-            jedis.get(key)?.let { jsonValue ->
-                try {
+        return jedisPool?.resource?.use { jedis ->
+            try {
+                jedis.get(key)?.let { jsonValue ->
                     json.decodeFromString<T>(jsonValue)
-                } catch (exception: Exception) {
-                    logger.error(exception) { "Error reading $key" }
-                    null
                 }
+            } catch (exception: Exception) {
+                logger.error(exception) { "Error getting $key" }
+                null
             }
         }
     }
 
     inline fun <reified T> peek(key: String): T? {
-        return jedis?.let { jedis ->
-            jedis.get(key)?.let { jsonValue ->
-                try {
+        return jedisPool?.resource?.use { jedis ->
+            try {
+                jedis.get(key)?.let { jsonValue ->
                     json.decodeFromString<T>(jsonValue)
-                } catch (exception: Exception) {
-                    logger.error(exception) { "Error reading $key" }
-                    null
                 }
+            } catch (exception: Exception) {
+                logger.error(exception) { "Error getting $key" }
+                null
             }
         }
     }
 
     inline fun <reified T> set(key: String, data: T?, ttl: Duration) {
-        jedis?.set(
-            key,
-            json.encodeToString(data),
-            SetParams.setParams().ex(ttl.inWholeSeconds)
-        )
+        jedisPool?.resource?.use { jedis ->
+            try {
+                jedis.set(
+                    key,
+                    json.encodeToString(data),
+                    SetParams.setParams().ex(ttl.inWholeSeconds)
+                )
+            } catch (exception: Exception) {
+                logger.error(exception) { "Error setting $key" }
+            }
+        }
     }
 
     fun clear() {
-        TODO()
+        jedisPool?.resource?.use { it.flushAll() }
     }
 
     val logger = KotlinLogging.logger {}

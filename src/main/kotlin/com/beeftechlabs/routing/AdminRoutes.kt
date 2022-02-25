@@ -20,6 +20,10 @@ import kotlinx.serialization.Serializable
 
 fun Routing.adminRoutes() {
 
+    get("/hello") {
+        call.response.status(HttpStatusCode.OK)
+    }
+
     get("/admin/clearRedis") {
         val secret = call.request.queryParameters["secret"]
 

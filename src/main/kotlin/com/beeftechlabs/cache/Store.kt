@@ -56,7 +56,7 @@ enum class CacheType(val ttl: Duration, val isAtomic: Boolean) {
     Sfts(1.hours, true),
     TokenPairs(1.hours, true),
     TokenPairDetails(5.minutes, false),
-    TokenAssets(1.days, true);
+    TokenAssets(10.days, true);
 
     val mutex = Mutex()
 }

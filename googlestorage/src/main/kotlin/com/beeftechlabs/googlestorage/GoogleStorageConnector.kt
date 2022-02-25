@@ -12,8 +12,8 @@ class GoogleStorageConnector(private val bucket: String) {
     private val json by lazy { Json { ignoreUnknownKeys = true; isLenient = true } }
 
     private fun getTokenAssets(assetPath: String): TokenAssets? {
-        val info = String(baseBucket.get("$assetPath/info.json").getContent())
         val assets = try {
+            val info = String(baseBucket.get("$assetPath/info.json").getContent())
             json.decodeFromString<TokenAssets>(info)
         } catch (exception: Exception) {
             println(exception)

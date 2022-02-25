@@ -41,7 +41,7 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1")
     implementation("com.soywiz.korlibs.krypto:krypto:2.4.12")
     implementation("com.ionspin.kotlin:bignum:0.3.4")
-    implementation("redis.clients:jedis:4.1.0")
+    implementation("redis.clients:jedis:4.0.1")
     implementation("io.github.microutils:kotlin-logging:2.1.21")
 
     testImplementation("io.ktor:ktor-server-tests:$ktor_version")

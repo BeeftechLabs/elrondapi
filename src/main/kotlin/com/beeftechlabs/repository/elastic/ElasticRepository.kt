@@ -57,16 +57,18 @@ object ElasticRepository {
         val result = ElasticService.executeQuery<ElasticTransaction> {
             index = "transactions"
             size = maxSize
-            must {
-                bool {
-                    should {
-                        term {
-                            name = "sender"
-                            value = request.address
-                        }
-                        term {
-                            name = "receiver"
-                            value = request.address
+            if (request.address.isNotEmpty()) {
+                must {
+                    bool {
+                        should {
+                            term {
+                                name = "sender"
+                                value = request.address
+                            }
+                            term {
+                                name = "receiver"
+                                value = request.address
+                            }
                         }
                     }
                 }
@@ -103,7 +105,11 @@ object ElasticRepository {
         val updatedTransactions = if (request.includeScResults || request.processTransactions) {
             var transactionsWithScResults = transactions
             startCustomTrace("GetTransactionsScResultsFaster:${request.address}")
-            val allScResults = getScResultsForQuery(request, minTs, maxTs)
+            val allScResults = if (request.address.isNotEmpty()) {
+                getScResultsForQuery(request, minTs, maxTs)
+            } else {
+                getScResultsForTransactions(transactions.map { it.hash })
+            }
             endCustomTrace("GetTransactionsScResultsFaster:${request.address}")
 
             allScResults.groupBy { it.originalTxHash }.forEach { entry ->
@@ -172,6 +178,27 @@ object ElasticRepository {
                 filterRange {
                     value = maxTs
                     direction = RangeDirection.Lte
+                }
+            }
+        }
+
+        return result.data.map { elasticScResult ->
+            elasticScResult.item.toScResult(elasticScResult.id)
+        }
+    }
+
+    private suspend fun getScResultsForTransactions(hashes: List<String>): List<ScResult> {
+        val result = ElasticService.executeQuery<ElasticScResult> {
+            index = "scresults"
+            size = 10000
+            must {
+                term {
+                    name = "originalTxHash"
+                    hashes.forEach {
+                        term {
+                            value = it
+                        }
+                    }
                 }
             }
         }

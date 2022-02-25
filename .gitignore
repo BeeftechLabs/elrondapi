@@ -31,3 +31,4 @@ build/*
 .idea/*
 deploy*.sh
 service-account*.json
+Dockerfile.*
