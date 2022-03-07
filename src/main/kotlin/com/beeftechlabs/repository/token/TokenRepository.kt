@@ -96,7 +96,7 @@ object TokenRepository {
                         assets = assets[commonIdentifier]
                     ))?.let {
                 Token(
-                    value = Value.extract(esdt.balance, identifierParts.first()),
+                    value = Value.extract(esdt.balance, identifierParts.first()) ?: Value.zero(identifierParts.first()),
                     properties = it
                 )
             }
@@ -124,7 +124,7 @@ object TokenRepository {
                 ?: getTokenProperties(commonIdentifier)
                     .takeIf { it.type == TokenType.NFT })?.let {
                 Token(
-                    value = Value.extract(esdt.balance, identifierParts.first()),
+                    value = Value.extract(esdt.balance, identifierParts.first()) ?: Value.zero(identifierParts.first()),
                     properties = it
                 )
             }
@@ -152,7 +152,7 @@ object TokenRepository {
                 ?: getTokenProperties(commonIdentifier)
                     .takeIf { it.type == TokenType.SFT })?.let {
                 Token(
-                    value = Value.extract(esdt.balance, identifierParts.first()),
+                    value = Value.extract(esdt.balance, identifierParts.first()) ?: Value.zero(identifierParts.first()),
                     properties = it
                 )
             }
@@ -165,13 +165,15 @@ object TokenRepository {
         Sfts.all().value.firstOrNull { it.identifier == id }
 
     suspend fun getTokenWithId(id: String): TokenProperties? = coroutineScope {
+        val realID = id.split("-").take(2).joinToString("-")
+
         val esdtsDeferred = async { Esdts.all().value }
         val nftsDeferred = async { Nfts.all().value }
         val sftsDeferred = async { Sfts.all().value }
 
-        getTokenPropertiesForId(id, esdtsDeferred.await())
-            ?: getTokenPropertiesForId(id, sftsDeferred.await())
-            ?: getTokenPropertiesForId(id, nftsDeferred.await())
+        getTokenPropertiesForId(realID, esdtsDeferred.await())
+            ?: getTokenPropertiesForId(realID, sftsDeferred.await())
+            ?: getTokenPropertiesForId(realID, nftsDeferred.await())
     }
 
     suspend fun getDecimalsForToken(id: String): Int =

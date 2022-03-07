@@ -22,6 +22,18 @@ data class ScResult(
 )
 
 fun ElasticScResult.toScResult(hash: String) = ScResult(
-    hash, sender, receiver, value, data ?: "", nonce, gasLimit, gasPrice, timestamp, prevTxHash, originalTxHash,
-    hasOperations, tokens ?: emptyList(), esdtValues ?: emptyList()
+    hash = hash,
+    sender = sender,
+    receiver = receiver,
+    value = value,
+    data = data ?: "",
+    nonce = nonce,
+    gasLimit = gasLimit,
+    gasPrice = gasPrice,
+    timestamp = timestamp,
+    prevTxHash = prevTxHash,
+    originalTxHash = originalTxHash,
+    hasOperations = hasOperations,
+    tokens = tokens ?: emptyList(),
+    esdtValues = esdtValues ?: emptyList()
 )

@@ -104,13 +104,15 @@ object ElasticRepository {
 
         val updatedTransactions = if (request.includeScResults || request.processTransactions) {
             var transactionsWithScResults = transactions
-            startCustomTrace("GetTransactionsScResultsFaster:${request.address}")
+            startCustomTrace("GetTransactionsScResults:${request.address}")
             val allScResults = if (request.address.isNotEmpty()) {
-                getScResultsForQuery(request, minTs, maxTs)
+                // TODO: This doesn't work for all cases
+//                getScResultsForQuery(request, minTs, maxTs)
+                getScResultsForTransactions(transactions.map { it.hash })
             } else {
                 getScResultsForTransactions(transactions.map { it.hash })
             }
-            endCustomTrace("GetTransactionsScResultsFaster:${request.address}")
+            endCustomTrace("GetTransactionsScResults:${request.address}")
 
             allScResults.groupBy { it.originalTxHash }.forEach { entry ->
                 transactionsWithScResults = transactionsWithScResults.map {
@@ -241,7 +243,7 @@ object ElasticRepository {
         return result.data.map { delegation ->
             AddressDelegation(
                 stakingProvider = StakingProvider(address = delegation.item.contract, ""),
-                value = Value.extract(delegation.item.activeStake, "EGLD"),
+                value = Value.extract(delegation.item.activeStake, "EGLD") ?: Value.zeroEgld(),
                 claimable = Value.None,
                 totalRewards = Value.None
             )
@@ -262,7 +264,7 @@ object ElasticRepository {
         return result.data.map { delegation ->
             Delegator(
                 address = delegation.item.address,
-                value = Value.extract(delegation.item.activeStake, "EGLD")
+                value = Value.extract(delegation.item.activeStake, "EGLD") ?: Value.zeroEgld()
             )
         }
     }

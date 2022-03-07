@@ -29,7 +29,7 @@ private fun ApplicationRequest.key() = "$${host()}:${path()}"
 
 fun startCustomTrace(key: String) {
     if (config.traceCalls) {
-//        logger.trace { "Tracing $key" }
+        logger.trace { "Tracing $key" }
         startTimestamps[key] = getTimeMillis()
     }
 }

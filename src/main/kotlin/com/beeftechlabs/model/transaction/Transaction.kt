@@ -3,6 +3,7 @@ package com.beeftechlabs.model.transaction
 import com.beeftechlabs.model.token.Value
 import com.beeftechlabs.repository.elastic.model.ElasticTransaction
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 @Serializable
 data class Transaction(
@@ -12,6 +13,8 @@ data class Transaction(
     val transactionValue: Value,
     val outValues: List<Value>,
     val inValues: List<Value>,
+    val outValuesRaw: List<Value>,
+    val inValuesRaw: List<Value>,
     val data: String,
     val nonce: Long,
     val gasLimit: Long,
@@ -21,8 +24,8 @@ data class Transaction(
     val timestamp: Long,
     val senderShard: Long,
     val receiverShard: Long,
-    val tokens: List<String>,
-    val esdtValues: List<String>,
+    @Transient val tokens: List<String> = emptyList(),
+    @Transient val esdtValues: List<String> = emptyList(),
     val status: String,
     val type: TransactionType,
     val function: String?,
@@ -32,8 +35,29 @@ data class Transaction(
 )
 
 suspend fun ElasticTransaction.toTransaction(hash: String) = Transaction(
-    hash, sender, receiver, Value.extract(value, "EGLD"), emptyList(), emptyList(), data ?: "", nonce, gasLimit,
-    gasPrice, gasUsed, Value.extract(fee, "EGLD"), timestamp, senderShard, receiverShard,
-    tokens ?: emptyList(), esdtValues ?: emptyList(), status, TransactionType.Unknown, "", hasScResults,
-    isScCall, emptyList()
+    hash = hash,
+    sender = sender,
+    receiver = receiver,
+    transactionValue = Value.extract(value, "EGLD") ?: Value.zeroEgld(),
+    outValues = emptyList(),
+    inValues = emptyList(),
+    outValuesRaw = emptyList(),
+    inValuesRaw = emptyList(),
+    data = data ?: "",
+    nonce = nonce,
+    gasLimit = gasLimit,
+    gasPrice = gasPrice,
+    gasUsed = gasUsed,
+    fee = Value.extract(fee, "EGLD") ?: Value.zeroEgld(),
+    timestamp = timestamp,
+    senderShard = senderShard,
+    receiverShard = receiverShard,
+    tokens = tokens ?: emptyList(),
+    esdtValues = esdtValues ?: emptyList(),
+    status = status,
+    type = TransactionType.Unknown,
+    function = "",
+    hasScResults = hasScResults,
+    isScCall = isScCall,
+    scResults = emptyList()
 )

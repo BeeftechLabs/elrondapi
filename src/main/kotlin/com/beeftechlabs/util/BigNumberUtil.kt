@@ -8,6 +8,9 @@ fun String.denominatedBigDecimal(isHex: Boolean = true, decimals: Int = 18): Big
     BigDecimal.fromBigInteger(BigInteger.parseString(this, if (isHex) 16 else 10))
         .divide(denomination(decimals))
 
+fun BigInteger.denominatedBigDecimal(decimals: Int = 18): BigDecimal =
+    BigDecimal.fromBigInteger(this).divide(denomination(decimals))
+
 fun String.bigDecimal(isHex: Boolean = true): BigDecimal =
     BigDecimal.fromBigInteger(BigInteger.parseString(this, if (isHex) 16 else 10))
 

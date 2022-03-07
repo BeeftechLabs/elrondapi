@@ -42,7 +42,7 @@ object AddressRepository {
         AddressDetails(
             address = address,
             nonce = account.nonce,
-            balance = Value.extract(account.balance, "EGLD"),
+            balance = Value.extract(account.balance, "EGLD") ?: Value.zeroEgld(),
             herotag = account.username,
             ownerAddress = account.ownerAddress,
             tokens = tokens.await(),
@@ -59,7 +59,7 @@ object AddressRepository {
     suspend fun getAddressBalance(address: String): Value = Value.extract(
         getAccountFromGateway(address).balance,
         "EGLD"
-    )
+    ) ?: Value.zeroEgld()
 
     suspend fun getAddressNonce(address: String): LongValue =
         LongValue(getAccountFromGateway(address).nonce)

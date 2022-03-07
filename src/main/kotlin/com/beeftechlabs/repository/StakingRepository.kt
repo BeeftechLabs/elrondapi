@@ -199,7 +199,7 @@ object StakingRepository {
             val timeLeft = roundsUntilComplete * networkConfig.roundDuration
 
             UndelegatedValue(
-                Value.extractHex(valueBase64.fromBase64ToHexString(), "EGLD"),
+                Value.extractHex(valueBase64.fromBase64ToHexString(), "EGLD") ?: Value.zeroEgld(),
                 timeLeft.coerceAtLeast(0)
             )
         }
@@ -238,7 +238,7 @@ object StakingRepository {
         val unstaked = unstakedResponse.await()
             .chunked(2).map { (value, epochsRemaining) ->
                 Unstaked(
-                    Value.extractHex(value.fromBase64ToHexString(), "EGLD"),
+                    Value.extractHex(value.fromBase64ToHexString(), "EGLD") ?: Value.zeroEgld(),
                     epochsRemaining.fromBase64ToHexString().takeIf { it.isNotEmpty() }
                         ?.toBigInteger(16)?.intValue() ?: 0
                 )
