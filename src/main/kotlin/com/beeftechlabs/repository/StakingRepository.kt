@@ -193,9 +193,8 @@ object StakingRepository {
         val roundsRemaining by lazy { networkConfig.roundsPerEpoch - networkStatus.roundsPassedInCurrentEpoch }
 
         return response.chunked(2).map { (valueBase64, epochsRemainingBase64) ->
-            val roundsUntilComplete =
-                (((epochsRemainingBase64.takeIf { it.isNotEmpty() }?.vmQueryToLong()
-                    ?: 1) - 1) * networkConfig.roundsPerEpoch) + roundsRemaining
+            val epochChangesRemaining = (epochsRemainingBase64.takeIf { it.isNotEmpty() }?.vmQueryToLong() ?: 0)
+            val roundsUntilComplete = ((epochChangesRemaining - 1) * networkConfig.roundsPerEpoch) + roundsRemaining
             val timeLeft = roundsUntilComplete * networkConfig.roundDuration
 
             UndelegatedValue(
