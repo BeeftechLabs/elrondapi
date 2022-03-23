@@ -26,7 +26,9 @@ fun BigInteger.denominated(decimals: Int = 18): BigDecimal =
 fun BigDecimal.formatted(roundPosition: Int = 5): String =
     roundToDigitPositionAfterDecimalPoint(roundPosition.toLong(), RoundingMode.FLOOR).toStringExpanded()
 
-fun BigDecimal.toDouble(): Double = doubleValue(false)
+// TODO: this doesn't work correctly in all cases apparently (10000000000 / 1000000 outputs wrong value)
+//fun BigDecimal.toDouble(): Double = doubleValue(false)
+fun BigDecimal.toDouble(): Double = formatted().toDouble()
 
 fun BigDecimal.toLong(): Long = toBigInteger().longValue()
 

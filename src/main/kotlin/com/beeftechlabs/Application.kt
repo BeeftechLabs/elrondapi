@@ -5,8 +5,8 @@ import com.beeftechlabs.plugins.configureMonitoring
 import com.beeftechlabs.plugins.configureRouting
 import com.beeftechlabs.plugins.configureSerialization
 import com.sksamuel.hoplite.ConfigLoader
+import io.ktor.server.cio.*
 import io.ktor.server.engine.*
-import io.ktor.server.netty.*
 import java.io.File
 
 val config = ConfigLoader().loadConfigOrThrow<Config>(
@@ -17,7 +17,7 @@ val config = ConfigLoader().loadConfigOrThrow<Config>(
 )
 
 fun main() {
-    embeddedServer(Netty, port = config.port) {
+    embeddedServer(CIO, port = config.port) {
         configureRouting()
         configureSerialization()
         configureMonitoring()

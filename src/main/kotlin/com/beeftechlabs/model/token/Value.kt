@@ -11,6 +11,7 @@ import mu.KotlinLogging
 @Serializable
 data class Value(
     val bigNumber: String,
+    val decimals: Int,
     val denominated: Double?,
     val token: String
 ) {
@@ -18,7 +19,7 @@ data class Value(
         return if (token == other.token) {
             val first = BigInteger.parseString(bigNumber)
             val second = BigInteger.parseString(other.bigNumber)
-            Value(first.add(second).toString(), denominated?.plus(other.denominated ?: 0.0), token)
+            Value(first.add(second).toString(), decimals, denominated?.plus(other.denominated ?: 0.0), token)
         } else {
             this
         }
@@ -28,26 +29,18 @@ data class Value(
         return if (token == other.token) {
             val first = BigInteger.parseString(bigNumber)
             val second = BigInteger.parseString(other.bigNumber)
-            Value(first.minus(second).toString(), denominated?.minus(other.denominated ?: 0.0), token)
+            Value(first.minus(second).toString(), decimals, denominated?.minus(other.denominated ?: 0.0), token)
         } else {
             this
         }
     }
 
-    fun abs(): Value = bigNumber.toBigDecimal().abs().let { abs ->
-        Value(
-            abs.toString(),
-            abs.toDouble(),
-            token
-        )
-    }
-
     companion object {
-        val None = Value("", null, "")
+        val None = Value("", 0, null, "")
 
         private const val MAX_PARSING_LENGTH = 64
 
-        fun zero(token: String) = Value("0", 0.0, token)
+        fun zero(token: String) = Value("0", 0, 0.0, token)
 
         fun zeroEgld() = zero("EGLD")
 
@@ -56,10 +49,12 @@ data class Value(
                 try {
                     val decimals = TokenRepository.getDecimalsForToken(tokenId)
                     val bigInteger = bigNumber.toBigInteger(16)
+                    val denominated = bigInteger.denominatedBigDecimal(decimals = decimals).toDouble()
+                        .takeIf { it.isFinite() }
                     Value(
                         bigNumber = bigInteger.toString(),
-                        denominated = bigInteger.denominatedBigDecimal(decimals = decimals).toDouble()
-                            .takeIf { it.isFinite() },
+                        decimals = decimals,
+                        denominated = denominated,
                         token = tokenId
                     )
                 } catch (exception: Exception) {
@@ -74,10 +69,12 @@ data class Value(
             if (bigNumber.isNotEmpty()) {
                 try {
                     val decimals = TokenRepository.getDecimalsForToken(tokenId)
+                    val denominated = bigNumber.denominatedBigDecimal(isHex = false, decimals = decimals).toDouble()
+                        .takeIf { it.isFinite() }
                     Value(
                         bigNumber = bigNumber,
-                        denominated = bigNumber.denominatedBigDecimal(isHex = false, decimals = decimals).toDouble()
-                            .takeIf { it.isFinite() },
+                        decimals = decimals,
+                        denominated = denominated,
                         token = tokenId
                     )
                 } catch (exception: Exception) {

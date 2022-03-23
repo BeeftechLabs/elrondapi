@@ -320,7 +320,7 @@ object ElasticRepository {
                 addresses = addresses.map {
                     SimpleAddressDetails(
                         address = it.address,
-                        balance = Value(it.balance, it.balanceNum, "EGLD")
+                        balance = Value(it.balance, 18, it.balanceNum, "EGLD")
                     )
                 },
                 hasMore = addresses.size == maxSize,

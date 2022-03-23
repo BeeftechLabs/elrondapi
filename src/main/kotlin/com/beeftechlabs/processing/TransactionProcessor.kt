@@ -248,7 +248,7 @@ object TransactionProcessor {
             }
             "changeServiceFee" -> {
                 outValue = args.getOrNull(1)
-                    ?.let { Value("", it.toIntOrNull(16)?.toDouble(), "") } ?: Value.None
+                    ?.let { Value("", 0, it.toIntOrNull(16)?.toDouble(), "") } ?: Value.None
                 transactionType = TransactionType.ChangeServiceFee
             }
             "wrapEgld" -> {
@@ -289,14 +289,15 @@ object TransactionProcessor {
     }
 
     private suspend fun extractTransactionValues(transaction: Transaction): List<Value> {
-        if (transaction.tokens.isNotEmpty()) {
-            return transaction.tokens.mapIndexedNotNull { index, token ->
-                Value.extract(
-                    transaction.esdtValues[index],
-                    token
-                )
-            }
-        } else {
+        // TODO not working
+//        if (transaction.tokens.isNotEmpty()) {
+//            return transaction.tokens.mapIndexedNotNull { index, token ->
+//                Value.extract(
+//                    transaction.esdtValues[index],
+//                    token
+//                )
+//            }
+//        } else {
             val scArgs = transaction.data.fromBase64String().split("@")
             return when (scArgs.firstOrNull()) {
                 "ESDTTransfer" -> listOfNotNull(extractESDTTransferValue(scArgs))
@@ -305,7 +306,7 @@ object TransactionProcessor {
                 "" -> listOfNotNull(transaction.transactionValue.takeIf { (it.denominated ?: 0.0) > 0 })
                 else -> emptyList()
             }
-        }
+//        }
     }
 
     private suspend fun extractValuesFromData(scResult: ScResult): List<Value> {

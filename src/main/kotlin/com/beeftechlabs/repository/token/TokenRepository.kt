@@ -96,7 +96,7 @@ object TokenRepository {
                         assets = assets[commonIdentifier]
                     ))?.let {
                 Token(
-                    value = Value.extract(esdt.balance, identifierParts.first()) ?: Value.zero(identifierParts.first()),
+                    value = Value.extract(esdt.balance, commonIdentifier) ?: Value.zero(identifierParts.first()),
                     properties = it
                 )
             }
@@ -124,7 +124,7 @@ object TokenRepository {
                 ?: getTokenProperties(commonIdentifier)
                     .takeIf { it.type == TokenType.NFT })?.let {
                 Token(
-                    value = Value.extract(esdt.balance, identifierParts.first()) ?: Value.zero(identifierParts.first()),
+                    value = Value.extract(esdt.balance, commonIdentifier) ?: Value.zero(identifierParts.first()),
                     properties = it
                 )
             }
@@ -152,7 +152,7 @@ object TokenRepository {
                 ?: getTokenProperties(commonIdentifier)
                     .takeIf { it.type == TokenType.SFT })?.let {
                 Token(
-                    value = Value.extract(esdt.balance, identifierParts.first()) ?: Value.zero(identifierParts.first()),
+                    value = Value.extract(esdt.balance, commonIdentifier) ?: Value.zero(identifierParts.first()),
                     properties = it
                 )
             }
