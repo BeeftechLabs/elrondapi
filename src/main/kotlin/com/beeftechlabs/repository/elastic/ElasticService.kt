@@ -131,6 +131,35 @@ object ElasticService {
                 }
             QueryFieldType.Filter ->
                 filter { filter ->
+                    if (field.children.isNotEmpty()) {
+                        // First try range
+                        val rangeChildren = field.children.filterIsInstance<QueryField.RangeQueryField>()
+                        if (rangeChildren.size > 1) {
+                            filter.range { range ->
+                                rangeChildren.fold(range) { builder, child ->
+                                    builder.field(field.name)
+                                        .directionToElastic(child.direction, child.value)
+                                }
+                            }
+                        } else if (rangeChildren.isNotEmpty()) {
+                            val rangeField = rangeChildren.first()
+                            filter.range { range ->
+                                range.field(rangeField.name).directionToElastic(rangeField.direction, field.value)
+                            }
+                        }
+                        // Then set regex
+                        field.children.firstOrNull { it.type == QueryFieldType.Regex }?.let { regexField ->
+                            filter.regexp { regex ->
+                                regex.field(regexField.name).value(
+                                    when (regexField) {
+                                        is QueryField.StringQueryField -> regexField.value
+                                        else -> throw IllegalArgumentException()
+                                    }
+                                )
+                            }
+                        }
+                    }
+
                     when (field) {
                         is QueryField.RangeQueryField -> {
                             if (field.children.isNotEmpty()) {

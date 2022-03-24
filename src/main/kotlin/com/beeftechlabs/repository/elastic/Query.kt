@@ -65,7 +65,7 @@ data class QueryPit(
     var length: Duration = 1.minutes
 )
 
-enum class QueryFieldType { Term, Prefix, Filter, Should, Must, Bool, Regex }
+enum class QueryFieldType { Term, Prefix, Filter, Range, Should, Must, Bool, Regex }
 
 fun elasticQuery(init: Query.() -> Unit): Query {
     val query = Query()
@@ -80,7 +80,7 @@ fun Query.term(init: StringQueryField.() -> Unit) = field(QueryFieldType.Term, i
 fun Query.longTerm(init: LongQueryField.() -> Unit) = field(QueryFieldType.Term, init)
 fun Query.prefix(init: StringQueryField.() -> Unit) = field(QueryFieldType.Prefix, init)
 fun Query.filter(init: StringQueryField.() -> Unit) = field(QueryFieldType.Filter, init)
-fun Query.filterRange(init: RangeQueryField.() -> Unit) = field(QueryFieldType.Filter, init)
+fun Query.range(init: RangeQueryField.() -> Unit) = field(QueryFieldType.Range, init)
 fun Query.should(init: StringQueryField.() -> Unit) = field(QueryFieldType.Should, init)
 fun Query.must(init: StringQueryField.() -> Unit) = field(QueryFieldType.Must, init)
 fun Query.bool(init: StringQueryField.() -> Unit) = field(QueryFieldType.Bool, init)
@@ -93,7 +93,7 @@ fun QueryField<*>.term(init: StringQueryField.() -> Unit) = field(QueryFieldType
 fun QueryField<*>.longTerm(init: LongQueryField.() -> Unit) = field(QueryFieldType.Term, init)
 fun QueryField<*>.prefix(init: StringQueryField.() -> Unit) = field(QueryFieldType.Prefix, init)
 fun QueryField<*>.filter(init: StringQueryField.() -> Unit) = field(QueryFieldType.Filter, init)
-fun QueryField<*>.filterRange(init: RangeQueryField.() -> Unit) = field(QueryFieldType.Filter, init)
+fun QueryField<*>.range(init: RangeQueryField.() -> Unit) = field(QueryFieldType.Range, init)
 fun QueryField<*>.should(init: StringQueryField.() -> Unit) = field(QueryFieldType.Should, init)
 fun QueryField<*>.must(init: StringQueryField.() -> Unit) = field(QueryFieldType.Must, init)
 fun QueryField<*>.bool(init: StringQueryField.() -> Unit) = field(QueryFieldType.Bool, init)

@@ -81,6 +81,13 @@ object ElasticRepository {
                     direction = if (request.newer) RangeDirection.Gte else RangeDirection.Lte
                 }
             }
+            if (request.dataFilter != null) {
+                filter {
+                    regex {
+
+                    }
+                }
+            }
             sort {
                 name = "timestamp"
                 order = SortOrder.Desc
@@ -271,10 +278,8 @@ object ElasticRepository {
             }
             filterRange {
                 name = "activeStakeNum"
-                filterRange {
-                    value = 0
-                    direction = RangeDirection.Gt
-                }
+                value = 0
+                direction = RangeDirection.Gt
             }
             when (sort) {
                 AddressSort.AddressAsc -> sort { name = "_id"; order = SortOrder.Asc }
