@@ -269,6 +269,13 @@ object ElasticRepository {
                     value = contractAddress
                 }
             }
+            filterRange {
+                name = "activeStakeNum"
+                filterRange {
+                    value = 0
+                    direction = RangeDirection.Gt
+                }
+            }
             when (sort) {
                 AddressSort.AddressAsc -> sort { name = "_id"; order = SortOrder.Asc }
                 AddressSort.AddressDesc -> sort { name = "_id"; order = SortOrder.Desc }
