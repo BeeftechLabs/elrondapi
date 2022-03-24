@@ -1,4 +1,4 @@
-package com.beeftechlabs.model.core
+package com.beeftechlabs.model.delegation
 
 import com.beeftechlabs.model.token.Value
 import kotlinx.serialization.Serializable

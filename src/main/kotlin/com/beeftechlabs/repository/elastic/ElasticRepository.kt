@@ -4,8 +4,9 @@ import com.beeftechlabs.config
 import com.beeftechlabs.model.address.AddressDelegation
 import com.beeftechlabs.model.address.AddressesResponse
 import com.beeftechlabs.model.address.SimpleAddressDetails
-import com.beeftechlabs.model.core.Delegator
 import com.beeftechlabs.model.core.StakingProvider
+import com.beeftechlabs.model.delegation.Delegator
+import com.beeftechlabs.model.delegation.DelegatorsResponse
 import com.beeftechlabs.model.token.Value
 import com.beeftechlabs.model.transaction.*
 import com.beeftechlabs.plugins.endCustomTrace
@@ -250,21 +251,66 @@ object ElasticRepository {
         }
     }
 
-    suspend fun getDelegators(contractAddress: String): List<Delegator> {
+    suspend fun getDelegators(
+        contractAddress: String,
+        sort: AddressSort,
+        requestedPageSize: Int,
+        requestId: String?,
+        startingWith: String?
+    ): DelegatorsResponse {
+        val maxSize = minOf(requestedPageSize, config.maxPageSize)
+
         val result = ElasticService.executeQuery<ElasticDelegation> {
             index = "delegators"
+            size = maxSize
             must {
                 term {
                     name = "contract"
                     value = contractAddress
                 }
             }
+            when (sort) {
+                AddressSort.AddressAsc -> sort { name = "_id"; order = SortOrder.Asc }
+                AddressSort.AddressDesc -> sort { name = "_id"; order = SortOrder.Desc }
+                AddressSort.BalanceAsc -> sort { name = "activeStakeNum"; order = SortOrder.Asc }
+                AddressSort.BalanceDesc -> sort { name = "activeStakeNum"; order = SortOrder.Desc }
+            }
+            pit {
+                id = requestId ?: ""
+                length = 1.minutes
+            }
+            startingWith?.let { searchAfter = it }
         }
 
-        return result.data.map { delegation ->
+        val delegators = result.data.map { delegation ->
             Delegator(
                 address = delegation.item.address,
                 value = Value.extract(delegation.item.activeStake, "EGLD") ?: Value.zeroEgld()
+            )
+        }
+
+        if (delegators.isNotEmpty()) {
+            val firstResult = when (sort) {
+                AddressSort.AddressAsc, AddressSort.AddressDesc -> delegators.first().address
+                AddressSort.BalanceAsc, AddressSort.BalanceDesc -> delegators.first().value.denominated?.toString()
+            }
+
+            val lastResult = when (sort) {
+                AddressSort.AddressAsc, AddressSort.AddressDesc -> delegators.last().address
+                AddressSort.BalanceAsc, AddressSort.BalanceDesc -> delegators.last().value.denominated?.toString()
+            }
+
+            return DelegatorsResponse(
+                delegators = delegators,
+                hasMore = delegators.size == maxSize,
+                requestId = result.pitId,
+                firstResult = firstResult,
+                lastResult = lastResult
+            )
+        } else {
+            return DelegatorsResponse(
+                delegators = emptyList(),
+                hasMore = false
             )
         }
     }
