@@ -55,7 +55,7 @@ object MdexRepository {
                 filter {
                     name = "originalTxHash"
                     createTransactions.data.map { it.id }.map { hash ->
-                        filter {
+                        term {
                             value = hash
                         }
                     }

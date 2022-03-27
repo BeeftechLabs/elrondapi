@@ -75,16 +75,19 @@ object ElasticRepository {
                 }
             }
             if (request.startTimestamp > 0) {
-                filterRange {
-                    name = "timestamp"
-                    value = request.startTimestamp
-                    direction = if (request.newer) RangeDirection.Gte else RangeDirection.Lte
+                filter {
+                    range {
+                        name = "timestamp"
+                        value = request.startTimestamp
+                        direction = if (request.newer) RangeDirection.Gte else RangeDirection.Lte
+                    }
                 }
             }
             if (request.dataFilter != null) {
                 filter {
                     regex {
-
+                        name = "data"
+                        value = request.dataFilter
                     }
                 }
             }
@@ -115,8 +118,8 @@ object ElasticRepository {
             startCustomTrace("GetTransactionsScResults:${request.address}")
             val allScResults = if (request.address.isNotEmpty()) {
                 // TODO: This doesn't work for all cases
-//                getScResultsForQuery(request, minTs, maxTs)
-                getScResultsForTransactions(transactions.map { it.hash })
+                getScResultsForQuery(request, minTs, maxTs)
+//                getScResultsForTransactions(transactions.map { it.hash })
             } else {
                 getScResultsForTransactions(transactions.map { it.hash })
             }
@@ -179,13 +182,13 @@ object ElasticRepository {
                     }
                 }
             }
-            filterRange {
+            filter {
                 name = "timestamp"
-                filterRange {
+                range {
                     value = minTs
                     direction = RangeDirection.Gte
                 }
-                filterRange {
+                range {
                     value = maxTs
                     direction = RangeDirection.Lte
                 }
@@ -276,10 +279,12 @@ object ElasticRepository {
                     value = contractAddress
                 }
             }
-            filterRange {
-                name = "activeStakeNum"
-                value = 0
-                direction = RangeDirection.Gt
+            filter {
+                range {
+                    name = "activeStakeNum"
+                    value = 0
+                    direction = RangeDirection.Gt
+                }
             }
             when (sort) {
                 AddressSort.AddressAsc -> sort { name = "_id"; order = SortOrder.Asc }

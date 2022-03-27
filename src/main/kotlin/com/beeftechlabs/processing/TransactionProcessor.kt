@@ -44,7 +44,9 @@ object TransactionProcessor {
     }
 
     private suspend fun parseESDTTransfer(transaction: Transaction, args: List<String>): Transaction {
-        startCustomTrace("parseESDTTransfer:${transaction.hash}")
+        if (TRACE_ENABLED) {
+            startCustomTrace("parseESDTTransfer:${transaction.hash}")
+        }
         val outValuesRaw = extractTransactionValues(transaction)
         val outValues = outValuesRaw.map { it.copy(token = it.token.tokenFromIdentifier()) }.groupedByToken()
 
@@ -84,12 +86,16 @@ object TransactionProcessor {
             type = transactionType,
             function = function
         ).also {
-            endCustomTrace("parseESDTTransfer:${transaction.hash}")
+            if (TRACE_ENABLED) {
+                endCustomTrace("parseESDTTransfer:${transaction.hash}")
+            }
         }
     }
 
     private suspend fun parseESDTNFTTransfer(transaction: Transaction, args: List<String>): Transaction {
-        startCustomTrace("parseESDTNFTTransfer:${transaction.hash}")
+        if (TRACE_ENABLED) {
+            startCustomTrace("parseESDTNFTTransfer:${transaction.hash}")
+        }
         val outValuesRaw = extractTransactionValues(transaction)
         val outValues = outValuesRaw.map { it.copy(token = it.token.tokenFromIdentifier()) }.groupedByToken()
 
@@ -138,12 +144,16 @@ object TransactionProcessor {
             receiver = otherAddress,
             function = function
         ).also {
-            endCustomTrace("parseESDTNFTTransfer:${transaction.hash}")
+            if (TRACE_ENABLED) {
+                endCustomTrace("parseESDTNFTTransfer:${transaction.hash}")
+            }
         }
     }
 
     private suspend fun parseMultiESDTNFTTransfer(transaction: Transaction, args: List<String>): Transaction {
-        startCustomTrace("parseMultiESDTNFTTransfer:${transaction.hash}")
+        if (TRACE_ENABLED) {
+            startCustomTrace("parseMultiESDTNFTTransfer:${transaction.hash}")
+        }
         val outValuesRaw = extractTransactionValues(transaction)
         val outValues = outValuesRaw.map { it.copy(token = it.token.tokenFromIdentifier()) }.groupedByToken()
 
@@ -195,12 +205,16 @@ object TransactionProcessor {
             receiver = otherAddress,
             function = function
         ).also {
-            endCustomTrace("parseMultiESDTNFTTransfer:${transaction.hash}")
+            if (TRACE_ENABLED) {
+                endCustomTrace("parseMultiESDTNFTTransfer:${transaction.hash}")
+            }
         }
     }
 
     private suspend fun parseOtherTransactions(transaction: Transaction, args: List<String>): Transaction {
-        startCustomTrace("parseOtherTransactions:${transaction.hash}")
+        if (TRACE_ENABLED) {
+            startCustomTrace("parseOtherTransactions:${transaction.hash}")
+        }
         var outValue: Value? = null
         val transactionType: TransactionType
         val function = args.firstOrNull()
@@ -274,7 +288,9 @@ object TransactionProcessor {
             type = transactionType,
             function = function
         ).also {
-            endCustomTrace("parseOtherTransactions:${transaction.hash}")
+            if (TRACE_ENABLED) {
+                endCustomTrace("parseOtherTransactions:${transaction.hash}")
+            }
         }
     }
 
@@ -361,6 +377,7 @@ object TransactionProcessor {
         startsWith("ESDTTransfer") || startsWith("ESDTNFTTransfer") || startsWith("MultiESDTNFTTransfer") || isEmpty()
 
     private const val METACHAIN = "4294967295"
+    private const val TRACE_ENABLED = false
 
     private val logger = KotlinLogging.logger {}
 }
