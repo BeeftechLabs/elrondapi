@@ -37,7 +37,8 @@ fun Routing.transactionRoutes() {
                     includeScResults = call.request.queryParameters["includeScResults"]?.toBooleanStrictOrNull()
                         ?: default.includeScResults,
                     processTransactions = call.request.queryParameters["processTransactions"]?.toBooleanStrictOrNull()
-                        ?: default.processTransactions
+                        ?: default.processTransactions,
+                    dataFilter = call.request.queryParameters["dataFilter"] ?: default.dataFilter
                 )
             }
 
@@ -61,7 +62,8 @@ fun Routing.transactionRoutes() {
                         includeScResults = call.request.queryParameters["includeScResults"]?.toBooleanStrictOrNull()
                             ?: default.includeScResults,
                         processTransactions = call.request.queryParameters["processTransactions"]?.toBooleanStrictOrNull()
-                            ?: default.processTransactions
+                            ?: default.processTransactions,
+                        dataFilter = call.request.queryParameters["dataFilter"] ?: default.dataFilter
                     )
                 }
 

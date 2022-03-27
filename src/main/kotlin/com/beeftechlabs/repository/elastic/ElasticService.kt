@@ -130,59 +130,70 @@ object ElasticService {
                     }
                 }
             QueryFieldType.Filter ->
-                filter { filter ->
-                    when (field) {
-                        is QueryField.RangeQueryField -> {
-                            if (field.children.isNotEmpty()) {
+                    if (field.children.isNotEmpty()) {
+                        // First try range
+                        val rangeChildren = field.children.filterIsInstance<QueryField.RangeQueryField>()
+                        if (rangeChildren.size > 1) {
+                            filter { filter ->
                                 filter.range { range ->
-                                    field.children.fold(range) { builder, child ->
-                                        when (child) {
-                                            is QueryField.RangeQueryField -> {
-                                                builder.field(field.name)
-                                                    .directionToElastic(child.direction, child.value)
-                                            }
+                                    rangeChildren.fold(range) { builder, child ->
+                                        builder.field(field.name.takeIf { it.isNotEmpty() } ?: child.name)
+                                            .directionToElastic(child.direction, child.value)
+                                    }
+                                }
+                            }
+                        } else if (rangeChildren.isNotEmpty()) {
+                            val rangeField = rangeChildren.first()
+                            filter { filter ->
+                                filter.range { range ->
+                                    range.field(field.name.takeIf { it.isNotEmpty() } ?: rangeField.name)
+                                        .directionToElastic(rangeField.direction, rangeField.value)
+                                }
+                            }
+                        }
+                        // Then set regex
+                        field.children.firstOrNull { it.type == QueryFieldType.Regex }?.let { regexField ->
+                            filter { filter ->
+                                filter.regexp { regex ->
+                                    regex.field(field.name.takeIf { it.isNotEmpty() } ?: regexField.name).value(
+                                        when (regexField) {
+                                            is QueryField.StringQueryField -> regexField.value
                                             else -> throw IllegalArgumentException()
                                         }
-                                    }
-                                }
-                            } else {
-                                filter.range { range ->
-                                    range.field(field.name).directionToElastic(field.direction, field.value)
+                                    )
                                 }
                             }
                         }
-                        is QueryField.StringQueryField -> {
-                            if (field.children.isNotEmpty()) {
-                                field.children.firstOrNull { it.type == QueryFieldType.Regex }?.let { regexField ->
-                                    filter.regexp { regex ->
-                                        regex.field(regexField.name).value(
-                                            when (regexField) {
-                                                is QueryField.StringQueryField -> regexField.value
-                                                else -> throw IllegalArgumentException()
-                                            }
-                                        )
-                                    }
-                                } ?: filter.terms { terms ->
-                                    terms.field(field.name)
-                                        .terms { values ->
-                                            values.value(field.children.map { child ->
-                                                when (child) {
-                                                    is QueryField.StringQueryField -> FieldValue.of(child.value)
-                                                    is QueryField.LongQueryField -> FieldValue.of(child.value)
-                                                    else -> throw IllegalArgumentException()
+                        field.children.filterIsInstance<QueryField.StringQueryField>()
+                            .filterNot { it.type == QueryFieldType.Regex }
+                            .let { stringQueryFields ->
+                                if (stringQueryFields.isNotEmpty()) {
+                                    filter { filter ->
+                                        filter.terms { terms ->
+                                            terms.field(field.name)
+                                                .terms { values ->
+                                                    values.value(stringQueryFields.map { child ->
+                                                        FieldValue.of(child.value)
+                                                    })
                                                 }
-                                            })
                                         }
+                                    }
+                                } else {
+                                    this
                                 }
-                            } else {
-                                filter.term { term ->
-                                    term.field(field.name).value { it.stringValue(field.value) }
+                        }
+                    } else {
+                        when (field) {
+                            is QueryField.StringQueryField -> {
+                                filter { filter ->
+                                    filter.term { term ->
+                                        term.field(field.name).value { it.stringValue(field.value) }
+                                    }
                                 }
                             }
+                            else -> throw IllegalArgumentException()
                         }
-                        else -> throw IllegalArgumentException()
                     }
-                }
             else -> throw IllegalArgumentException("Cannot place ${field.type} here")
         }
 
