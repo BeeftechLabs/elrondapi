@@ -13,10 +13,8 @@ info:
     url: "https://www.gnu.org/licenses/gpl-3.0.en.html"
 
 servers:
-  - url: //api.partnerstaking.com
+  - url: //elrond.api.beeftech.cloud
     description: Default server
-  - url: //api-alpha.partnerstaking.com
-    description: Alpha server
 
 tags:
   - name: "transaction"
