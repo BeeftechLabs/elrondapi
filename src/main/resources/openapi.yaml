@@ -732,6 +732,30 @@ paths:
           schema:
             $ref: "#/definitions/NetworkStatus"
 
+  /scQuery:
+    post:
+      tags:
+        - "network"
+      summary: "Query a Smart Contract function"
+      description: "SC function arguments need to be hex encoded."
+      operationId: "scQuery"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          description: "SC Query parameters"
+          required: true
+          schema:
+            $ref: '#/definitions/ScQueryRequest'
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/ScQueryParsedResponse"
+
   /mdex/tokenPairs:
     get:
       tags:
@@ -1328,3 +1352,39 @@ definitions:
       value:
         type: "integer"
         format: "int64"
+
+  ScQueryRequest:
+    type: "object"
+    properties:
+      scAddress:
+        type: "string"
+      funcName:
+        type: "string"
+      args:
+        type: "array"
+        items:
+          type: "string"
+      caller:
+        type: "string"
+
+  ScQueryParsedResponse:
+    type: "object"
+    properties:
+      output:
+        type: "array"
+        items:
+          $ref: '#/definitions/ScQueryResultData'
+
+  ScQueryResultData:
+    type: "object"
+    properties:
+      string:
+        type: "string"
+      bigNumber:
+        type: "string"
+      int:
+        type: "integer"
+        format: "int64"
+      double:
+        type: "number"
+        format: "double"
