@@ -3,13 +3,16 @@ package com.beeftechlabs.routing
 import com.beeftechlabs.config
 import com.beeftechlabs.model.network.NetworkConfig
 import com.beeftechlabs.model.network.NetworkStatus
+import com.beeftechlabs.model.smartcontract.ScQueryRequest
 import com.beeftechlabs.repository.Nodes
 import com.beeftechlabs.repository.StakingProviders
 import com.beeftechlabs.repository.address.model.AddressSort
 import com.beeftechlabs.repository.elastic.ElasticRepository
 import com.beeftechlabs.repository.network.cached
+import com.beeftechlabs.service.SCService
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +20,12 @@ import kotlinx.coroutines.withContext
 
 fun Routing.coreNetworkRoutes() {
     if (config.hasElrondConfig) {
+        post("/scQuery") {
+            val request = call.receive<ScQueryRequest>()
+
+            call.respond(SCService.vmQueryParsed(request))
+        }
+
         get("/network/config") {
             call.respond(NetworkConfig.cached())
         }

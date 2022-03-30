@@ -1,6 +1,8 @@
 package com.beeftechlabs.service
 
+import com.beeftechlabs.model.smartcontract.ScQueryParsedResponse
 import com.beeftechlabs.model.smartcontract.ScQueryRequest
+import com.beeftechlabs.model.smartcontract.ScQueryResultData
 import com.beeftechlabs.util.*
 
 object SCService {
@@ -21,6 +23,16 @@ object SCService {
         )
 
         return response.data.data.returnData?.mapNotNull { it } ?: emptyList()
+    }
+
+    suspend fun vmQueryParsed(
+        request: ScQueryRequest
+    ): ScQueryParsedResponse {
+        val response = GatewayService.vmQuery(request)
+
+        return ScQueryParsedResponse(
+            response.data.data.returnData?.mapNotNull { it }?.map(ScQueryResultData::fromString) ?: emptyList()
+        )
     }
 
     suspend fun vmQueryDouble(
