@@ -30,15 +30,19 @@ suspend inline fun <reified T> putInCache(key: String, data: T?, ttl: Duration) 
 }
 
 suspend inline fun <reified T> withCache(type: CacheType, instance: String = "", producer: () -> T): T {
-    if (type.isAtomic) {
-        type.mutex.lock()
+    return if (type.ttl.inWholeSeconds > 0) {
+        if (type.isAtomic) {
+            type.mutex.lock()
+        }
+        val key = if (instance.isNotEmpty()) "${type.name}:$instance" else type.name
+        val value = tryCache(key, type.ttl) ?: producer().also { putInCache(key, it, type.ttl) }
+        if (type.isAtomic) {
+            type.mutex.unlock()
+        }
+        value
+    } else {
+        producer()
     }
-    val key = if (instance.isNotEmpty()) "${type.name}:$instance" else type.name
-    val value = tryCache(key, type.ttl) ?: producer().also { putInCache(key, it, type.ttl) }
-    if (type.isAtomic) {
-        type.mutex.unlock()
-    }
-    return value
 }
 
 enum class CacheType(val ttl: Duration, val isAtomic: Boolean) {
