@@ -23,6 +23,7 @@ fun Routing.transactionRoutes() {
             val request = call.receive<TransactionsRequest>()
 
             withContext(Dispatchers.IO) {
+                println("Fetching transactions for request: $request")
                 call.respond(TransactionRepository.getTransactions(request))
             }
         }
@@ -43,6 +44,7 @@ fun Routing.transactionRoutes() {
             }
 
             withContext(Dispatchers.IO) {
+                println("Fetching transactions for request: $request")
                 call.respond(TransactionRepository.getTransactions(request))
             }
         }
@@ -68,6 +70,7 @@ fun Routing.transactionRoutes() {
                 }
 
                 withContext(Dispatchers.IO) {
+                    println("Fetching transactions for request: $request")
                     call.respond(TransactionRepository.getTransactions(request))
                 }
             } else {

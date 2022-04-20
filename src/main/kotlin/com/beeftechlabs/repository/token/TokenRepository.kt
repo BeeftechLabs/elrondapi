@@ -15,9 +15,7 @@ import com.beeftechlabs.plugins.startCustomTrace
 import com.beeftechlabs.repository.token.model.FungibleTokenResponse
 import com.beeftechlabs.repository.token.model.GetEsdtsResponse
 import com.beeftechlabs.service.GatewayService
-import com.beeftechlabs.util.fromBase64String
-import com.beeftechlabs.util.fromBase64ToHexString
-import com.beeftechlabs.util.toHexString
+import com.beeftechlabs.util.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -79,13 +77,12 @@ object TokenRepository {
     suspend fun getEsdtsForAddress(address: String): List<Token> = coroutineScope {
         startCustomTrace("TokensForAddress:$address")
         val addressEsdtsDeferred =
-            async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
+            async { tryCoroutineOrDefault(emptyList()) { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values } }
         val esdtsDeferred = async { Esdts.all() }
 
         val assets = AllTokenAssets.get().value
-
-        val addressEsdts = addressEsdtsDeferred.await()
         val esdts = esdtsDeferred.await().value.associateBy { it.identifier }
+        val addressEsdts = addressEsdtsDeferred.await()
 
         addressEsdts.mapNotNull { esdt ->
             val identifierParts = esdt.tokenIdentifier.split("-")
@@ -111,7 +108,7 @@ object TokenRepository {
     suspend fun getNftsForAddress(address: String): List<Token> = coroutineScope {
         startCustomTrace("NftsForAddress:$address")
         val esdtsDeferred =
-            async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
+            async { tryCoroutineOrDefault(emptyList()) { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values } }
         val nftsDeferred = async { Nfts.all() }
 
         val esdts = esdtsDeferred.await()
@@ -139,7 +136,7 @@ object TokenRepository {
     suspend fun getSftsForAddress(address: String): List<Token> = coroutineScope {
         startCustomTrace("SftsForAddress:$address")
         val esdtsDeferred =
-            async { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values }
+            async { tryCoroutineOrDefault(emptyList()) { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values } }
         val sftsDeferred = async { Sfts.all() }
 
         val esdts = esdtsDeferred.await()

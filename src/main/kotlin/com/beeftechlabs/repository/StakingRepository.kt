@@ -28,20 +28,16 @@ object StakingRepository {
     private val elrondConfig by lazy { config.elrond!! }
 
     suspend fun getDelegations(address: String): List<AddressDelegation> = coroutineScope {
-        startCustomTrace("GetDelegations:$address")
-        val providers = async { StakingProviders.all().value }
-        val delegationsDeferred = async {
-            withCache(CacheType.AddressDelegations, address) {
-                ElasticRepository.getDelegations(address)
-            }
-        }
-        val networkConfig = async { NetworkConfig.cached() }
-        val networkStatus = async { NetworkStatus.cached() }
+        withCache(CacheType.AddressDelegations, address) {
+            startCustomTrace("GetDelegations:$address")
 
-        val delegations = delegationsDeferred.await()
+            val providers = async { StakingProviders.all().value }
+            val networkConfig = async { NetworkConfig.cached() }
+            val networkStatus = async { NetworkStatus.cached() }
 
-        val actualDelegations =
-            withCache(CacheType.AddressDelegationsVm, address) {
+            val delegations = ElasticRepository.getDelegations(address)
+
+            val actualDelegations = async {
                 delegations.map {
                     it.stakingProvider.address to async {
                         getAddressDelegatedListForContract(
@@ -52,8 +48,7 @@ object StakingRepository {
                 }.associate { it.first to it.second.await() }
             }
 
-        val undelegations =
-            withCache(CacheType.AddressUndelegations, address) {
+            val undelegations = async {
                 delegations.map {
                     it.stakingProvider.address to async {
                         getAddressUndelegatedListForContract(
@@ -66,8 +61,7 @@ object StakingRepository {
                 }.associate { it.first to it.second.await() }
             }
 
-        val claimables =
-            withCache(CacheType.AddressClaimable, address) {
+            val claimables = async {
                 delegations.map {
                     it.stakingProvider.address to async {
                         getAddressClaimableForContract(
@@ -78,30 +72,32 @@ object StakingRepository {
                 }.associate { it.first to it.second.await() }
             }
 
-        val totalRewards =
-            withCache(CacheType.AddressTotalRewards, address) {
-                delegations.map {
-                    it.stakingProvider.address to async {
-                        getAddressTotalRewardsForContract(
-                            address,
-                            it.stakingProvider.address
-                        )
-                    }
-                }.associate { it.first to it.second.await() }
+            val totalRewards = async {
+                withCache(CacheType.AddressTotalRewards, address) {
+                    delegations.map {
+                        it.stakingProvider.address to async {
+                            getAddressTotalRewardsForContract(
+                                address,
+                                it.stakingProvider.address
+                            )
+                        }
+                    }.associate { it.first to it.second.await() }
+                }
             }
 
-        delegations.map { delegation ->
-            delegation.copy(
-                value = actualDelegations[delegation.stakingProvider.address] ?: Value.zeroEgld(),
-                stakingProvider = providers.await().find { it.address == delegation.stakingProvider.address }
-                    ?: delegation.stakingProvider,
-                undelegatedList = undelegations[delegation.stakingProvider.address] ?: emptyList(),
-                claimable = claimables[delegation.stakingProvider.address] ?: Value.zeroEgld(),
-                totalRewards = totalRewards[delegation.stakingProvider.address] ?: Value.zeroEgld()
-            )
-        }.filter { (it.value.denominated ?: 0.0) > 0 || it.undelegatedList.isNotEmpty() }
-    }.also {
-        endCustomTrace("GetDelegations:$address")
+            delegations.map { delegation ->
+                delegation.copy(
+                    value = actualDelegations.await()[delegation.stakingProvider.address] ?: Value.zeroEgld(),
+                    stakingProvider = providers.await().find { it.address == delegation.stakingProvider.address }
+                        ?: delegation.stakingProvider,
+                    undelegatedList = undelegations.await()[delegation.stakingProvider.address] ?: emptyList(),
+                    claimable = claimables.await()[delegation.stakingProvider.address] ?: Value.zeroEgld(),
+                    totalRewards = totalRewards.await()[delegation.stakingProvider.address] ?: Value.zeroEgld()
+                )
+            }.filter { (it.value.denominated ?: 0.0) > 0 || it.undelegatedList.isNotEmpty() }
+        }.also {
+            endCustomTrace("GetDelegations:$address")
+        }
     }
 
     suspend fun getStakingProviders(): StakingProviders {
@@ -227,22 +223,25 @@ object StakingRepository {
     }
 
     suspend fun getStaked(address: String): Pair<Value?, List<Unstaked>> = coroutineScope {
-        val addressHex = Address(address).hex
-        val stakedResponse = async { SCService.vmQuery(elrondConfig.auction, "getTotalStaked", listOf(addressHex)) }
-        val unstakedResponse =
-            async { SCService.vmQuery(elrondConfig.auction, "getUnStakedTokensList", listOf(addressHex)) }
+        withCache(CacheType.AddressStake, address) {
+            val addressHex = Address(address).hex
+            val stakedResponse = async { SCService.vmQuery(elrondConfig.auction, "getTotalStaked", listOf(addressHex)) }
+            val unstakedResponse =
+                async { SCService.vmQuery(elrondConfig.auction, "getUnStakedTokensList", listOf(addressHex)) }
 
-        val staked = stakedResponse.await().firstOrNull()?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
-            ?: Value.zeroEgld()
-        val unstaked = unstakedResponse.await()
-            .chunked(2).map { (value, epochsRemaining) ->
-                Unstaked(
-                    Value.extractHex(value.fromBase64ToHexString(), "EGLD") ?: Value.zeroEgld(),
-                    epochsRemaining.fromBase64ToHexString().takeIf { it.isNotEmpty() }
-                        ?.toBigInteger(16)?.intValue() ?: 0
-                )
-            }
-        Pair(staked, unstaked)
+            val staked =
+                stakedResponse.await().firstOrNull()?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
+                    ?: Value.zeroEgld()
+            val unstaked = unstakedResponse.await()
+                .chunked(2).map { (value, epochsRemaining) ->
+                    Unstaked(
+                        Value.extractHex(value.fromBase64ToHexString(), "EGLD") ?: Value.zeroEgld(),
+                        epochsRemaining.fromBase64ToHexString().takeIf { it.isNotEmpty() }
+                            ?.toBigInteger(16)?.intValue() ?: 0
+                    )
+                }
+            Pair(staked, unstaked)
+        }
     }
 
     private const val NUM_PARALLEL_PROVIDER_FETCH = 100

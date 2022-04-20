@@ -7,7 +7,6 @@ import com.beeftechlabs.model.transaction.Transaction
 import com.beeftechlabs.model.transaction.TransactionType
 import com.beeftechlabs.plugins.endCustomTrace
 import com.beeftechlabs.plugins.startCustomTrace
-import com.beeftechlabs.processing.TransactionProcessor.groupedByToken
 import com.beeftechlabs.util.fromBase64String
 import com.beeftechlabs.util.fromHexString
 import com.beeftechlabs.util.tokenFromIdentifier
@@ -16,31 +15,27 @@ import mu.KotlinLogging
 object TransactionProcessor {
 
     suspend fun process(transaction: Transaction): Transaction {
-        return if (!transaction.isScCall && !transaction.hasScResults) {
-            transaction.copy(
-                type = TransactionType.Transfer,
-                outValues = listOf(transaction.transactionValue),
-                inValues = emptyList()
-            )
-        } else {
-            val data = transaction.data.fromBase64String()
-            val args = data.split("@")
+        val data = transaction.data.fromBase64String()
+        val args = data.split("@")
 
-            args.firstOrNull()?.let { function ->
-                when (function) {
-                    "ESDTTransfer" -> parseESDTTransfer(transaction, args)
-                    "ESDTNFTTransfer" -> parseESDTNFTTransfer(transaction, args)
-                    "MultiESDTNFTTransfer" -> parseMultiESDTNFTTransfer(transaction, args)
-                    else -> parseOtherTransactions(transaction, args)
-                }.let { processed ->
-                    if (processed.function.isNullOrEmpty()) {
-                        processed.copy(function = function)
-                    } else {
-                        processed
-                    }
+        return args.filterNot { it.isEmpty() }.firstOrNull()?.let { function ->
+            when (function) {
+                "ESDTTransfer" -> parseESDTTransfer(transaction, args)
+                "ESDTNFTTransfer" -> parseESDTNFTTransfer(transaction, args)
+                "MultiESDTNFTTransfer" -> parseMultiESDTNFTTransfer(transaction, args)
+                else -> parseOtherTransactions(transaction, args)
+            }.let { processed ->
+                if (processed.function.isNullOrEmpty()) {
+                    processed.copy(function = function)
+                } else {
+                    processed
                 }
-            } ?: transaction
-        }
+            }
+        } ?: transaction.copy(
+            type = TransactionType.Transfer,
+            outValues = listOf(transaction.transactionValue),
+            inValues = emptyList()
+        )
     }
 
     private suspend fun parseESDTTransfer(transaction: Transaction, args: List<String>): Transaction {
@@ -314,11 +309,11 @@ object TransactionProcessor {
 //                )
 //            }
 //        } else {
-            val scArgs = transaction.data.fromBase64String().split("@")
-            return when (scArgs.firstOrNull()) {
-                "ESDTTransfer" -> listOfNotNull(extractESDTTransferValue(scArgs))
-                "ESDTNFTTransfer" -> listOfNotNull(extractESDTNFTTransferValue(scArgs))
-                "MultiESDTNFTTransfer" -> extractMultiESDTNFTTransferValue(scArgs)
+            val args = transaction.data.fromBase64String().split("@")
+            return when (args.firstOrNull()) {
+                "ESDTTransfer" -> listOfNotNull(extractESDTTransferValue(args))
+                "ESDTNFTTransfer" -> listOfNotNull(extractESDTNFTTransferValue(args))
+                "MultiESDTNFTTransfer" -> extractMultiESDTNFTTransferValue(args)
                 "" -> listOfNotNull(transaction.transactionValue.takeIf { (it.denominated ?: 0.0) > 0 })
                 else -> emptyList()
             }
