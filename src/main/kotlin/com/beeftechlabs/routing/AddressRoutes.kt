@@ -1,6 +1,7 @@
 package com.beeftechlabs.routing
 
 import com.beeftechlabs.config
+import com.beeftechlabs.repository.StakingRepository
 import com.beeftechlabs.repository.address.AddressRepository
 import com.beeftechlabs.repository.address.model.AddressSort
 import com.beeftechlabs.repository.token.TokenRepository
@@ -103,6 +104,17 @@ fun Routing.addressRoutes() {
             } else {
                 withContext(Dispatchers.IO) {
                     call.respond(TokenRepository.getSftsForAddress(address))
+                }
+            }
+        }
+
+        get("/addresses/{address}/delegations") {
+            val address = call.parameters["address"]
+            if (address.isNullOrEmpty()) {
+                call.response.status(HttpStatusCode.BadRequest)
+            } else {
+                withContext(Dispatchers.IO) {
+                    call.respond(StakingRepository.getDelegations(address))
                 }
             }
         }
