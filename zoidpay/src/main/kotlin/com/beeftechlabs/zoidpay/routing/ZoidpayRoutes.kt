@@ -28,7 +28,7 @@ fun Routing.zoidpayRoutes() {
             }
         }
 
-        get("/zoidpay/{pool}/delegatorsDetails") {
+        get("/zoidpay/{pool}/delegatorsStakes") {
             val pool = call.parameters["pool"]
             val start = call.request.queryParameters["start"]?.toIntOrNull() ?: 0
             val size = call.request.queryParameters["size"]?.toIntOrNull() ?: 25

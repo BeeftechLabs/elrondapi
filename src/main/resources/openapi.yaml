@@ -75,6 +75,21 @@ tags:
     description: |
       <SchemaDefinition schemaRef="#/components/schemas/TokenPairDetails" />
 
+  - name: "zoidpay"
+    description: "ZoidPay Staking API"
+  - name: "zoidpaystake_model"
+    x-displayName: Stake
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/ZoidPayStake" />
+  - name: "shoppingpool_model"
+    x-displayName: ShoppingPool
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/ShoppingPool" />
+  - name: "zoidpayclaimablereward_model"
+    x-displayName: ClaimableReward
+    description: |
+      <SchemaDefinition schemaRef="#/components/schemas/ZoidPayClaimableReward" />
+
 x-tagGroups:
   - name: Endpoints
     tags:
@@ -84,6 +99,7 @@ x-tagGroups:
       - token
       - network
       - mdex
+      - zoidpay
   - name: Models
     tags:
       - transaction_model
@@ -96,6 +112,9 @@ x-tagGroups:
       - networkstatus_model
       - tokenpair_model
       - tokenpairdetails_model
+      - zoidpaystake_model
+      - shoppingpool_model
+      - zoidpayclaimablereward_model
 
 schemes:
   - "https"
@@ -796,6 +815,236 @@ paths:
           schema:
             $ref: "#/definitions/TokenPairDetails"
 
+  /zoidpay/{pool}/delegators:
+    get:
+      tags:
+        - "zoidpay"
+      summary: "Get all delegators for a Shopping Pool"
+      description: "Get all delegators for a Shopping Pool. Returns a List of addresses in erd format."
+      operationId: "getPoolDelegators"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "pool"
+          type: "string"
+          description: "Pool address in erd format"
+          required: true
+      responses:
+        "400":
+          description: "Invalid pool address"
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+
+  /zoidpay/{pool}/delegatorsStakes:
+    get:
+      tags:
+        - "zoidpay"
+      summary: "Get delegators stakes within a Shopping Pool"
+      description: "Get delegators stakes within a Shopping Pool. Returns a List of take. Endpoint is paginated."
+      operationId: "getPoolDelegatorsStakes"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "pool"
+          type: "string"
+          description: "Pool address in erd format"
+          required: true
+        - in: "query"
+          name: "start"
+          type: "integer"
+          description: "Start index to return Stakes from"
+          required: true
+          default: 0
+        - in: "query"
+          name: "size"
+          type: "integer"
+          description: "Number of Stakes to return"
+          required: true
+          default: 25
+      responses:
+        "400":
+          description: "Invalid pool address"
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/ZoidPayStake"
+
+  /zoidpay/{address}/stakes:
+    get:
+      tags:
+        - "zoidpay"
+      summary: "Get an address' Stakes"
+      description: "Get an address' Stakes. Returns a List of Stake."
+      operationId: "getAddressStakes"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "address"
+          type: "string"
+          description: "Address in erd format"
+          required: true
+      responses:
+        "400":
+          description: "Invalid address"
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/ZoidPayStake"
+
+  /zoidpay/{address}/claimable:
+    get:
+      tags:
+        - "zoidpay"
+      summary: "Get an address' claimable rewards"
+      description: "Get an address' claimable rewards from all Stakes. Returns a Value."
+      operationId: "getAddressClaimableRewards"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "address"
+          type: "string"
+          description: "Address in erd format"
+          required: true
+      responses:
+        "400":
+          description: "Invalid address"
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Value"
+
+  /zoidpay/{address}/claimablePerStake:
+    get:
+      tags:
+        - "zoidpay"
+      summary: "Get an address' claimable rewards per Stake"
+      description: "Get an address' claimable rewards for each Stake. Returns a List of ClaimableReward."
+      operationId: "getAddressClaimableRewardsPerStake"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "address"
+          type: "string"
+          description: "Address in erd format"
+          required: true
+      responses:
+        "400":
+          description: "Invalid address"
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/ZoidPayClaimableReward"
+
+  /zoidpay/pools:
+    get:
+      tags:
+        - "zoidpay"
+      summary: "Get all Shopping Pools"
+      description: "Get all Shopping Pools. Returns a List of ShoppingPool."
+      operationId: "getShoppingPools"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/ShoppingPool"
+
+  /zoidpay/{address}/transaction/stake:
+    get:
+      tags:
+        - "zoidpay"
+      summary: "Construct a Stake Transaction"
+      description: "Construct a Stake Transaction. Returns a ready to sign Transaction."
+      operationId: "createStakeTransaction"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "address"
+          type: "string"
+          description: "Address in erd format"
+          required: true
+        - in: "query"
+          name: "value"
+          type: "number"
+          format: "double"
+          description: "Value to stake"
+          required: true
+        - in: "query"
+          name: "pool"
+          type: "string"
+          description: "Shopping Pool address in erd format"
+          required: true
+        - in: "query"
+          name: "months"
+          type: "integer"
+          description: "Number of months"
+          required: true
+      responses:
+        "400":
+          description: "Invalid address or parameters"
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/NewTransaction"
+
+  /zoidpay/{address}/transaction/claim:
+    get:
+      tags:
+        - "zoidpay"
+      summary: "Construct a Claim Transaction"
+      description: "Construct a Claim Transaction. Returns a ready to sign Transaction."
+      operationId: "createClaimTransaction"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "path"
+          name: "address"
+          type: "string"
+          description: "Address in erd format"
+          required: true
+      responses:
+        "400":
+          description: "Invalid address"
+        "200":
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/NewTransaction"
+
 components:
   schemas:
     Transaction:
@@ -1388,3 +1637,46 @@ definitions:
       double:
         type: "number"
         format: "double"
+
+  ZoidPayStake:
+    type: "object"
+    properties:
+      address:
+        type: "string"
+      stakedAmount:
+        $ref: '#/definitions/Value'
+      timestamp:
+        type: "integer"
+        format: "int64"
+      months:
+        type: "integer"
+      isPool:
+        type: "boolean"
+
+  ShoppingPool:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+      owner:
+        type: "string"
+      totalStaked:
+        $ref: '#/definitions/Value'
+      zoidsters:
+        type: "integer"
+        format: "int64"
+      status:
+        type: "integer"
+      name:
+        type: "string"
+
+  ZoidPayClaimableReward:
+    type: "object"
+    properties:
+      pool:
+        type: "string"
+      reward:
+        $ref: '#/definitions/Value'
+      timestamp:
+        type: "integer"
+        format: "int64"
