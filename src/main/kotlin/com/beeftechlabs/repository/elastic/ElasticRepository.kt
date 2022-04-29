@@ -118,8 +118,8 @@ object ElasticRepository {
             startCustomTrace("GetTransactionsScResults:${request.address}")
             val allScResults = if (request.address.isNotEmpty()) {
                 // TODO: This doesn't work for all cases
-                getScResultsForQuery(request, minTs, maxTs)
-//                getScResultsForTransactions(transactions.map { it.hash })
+//                getScResultsForQuery(request, minTs, maxTs)
+                getScResultsForTransactions(transactions.map { it.hash })
             } else {
                 getScResultsForTransactions(transactions.map { it.hash })
             }

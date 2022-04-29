@@ -30,10 +30,20 @@ object TransactionProcessor {
                 } else {
                     processed
                 }
+            }.let { transaction ->
+                if ((transaction.transactionValue.denominated ?: 0.0) > 0.0) {
+                    transaction.copy(
+                        outValues = transaction.outValues + transaction.transactionValue,
+                        outValuesRaw = transaction.outValuesRaw + transaction.transactionValue
+                    )
+                } else {
+                    transaction
+                }
             }
         } ?: transaction.copy(
             type = TransactionType.Transfer,
             outValues = listOf(transaction.transactionValue),
+            outValuesRaw = listOf(transaction.transactionValue),
             inValues = emptyList()
         )
     }
