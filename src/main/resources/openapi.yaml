@@ -846,8 +846,8 @@ paths:
     get:
       tags:
         - "zoidpay"
-      summary: "Get delegators stakes within a Shopping Pool"
-      description: "Get delegators stakes within a Shopping Pool. Returns a List of take. Endpoint is paginated."
+      summary: "Get delegators' stakes within a Shopping Pool"
+      description: "Get delegators' stakes within a Shopping Pool. Returns a List of Stake. Endpoint is paginated."
       operationId: "getPoolDelegatorsStakes"
       consumes:
         - "application/json"
