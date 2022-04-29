@@ -4,7 +4,7 @@ import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.json.*
-import io.ktor.client.plugins.json.serializer.*
+import io.ktor.client.plugins.kotlinx.serializer.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.http.*
 

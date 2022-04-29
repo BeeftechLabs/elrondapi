@@ -3,6 +3,7 @@ package com.beeftechlabs.routing
 import com.beeftechlabs.config
 import com.beeftechlabs.repository.StakingRepository
 import com.beeftechlabs.repository.address.AddressRepository
+import com.beeftechlabs.repository.address.CoreAddressRepository
 import com.beeftechlabs.repository.address.model.AddressSort
 import com.beeftechlabs.repository.token.TokenRepository
 import io.ktor.http.*
@@ -59,7 +60,7 @@ fun Routing.addressRoutes() {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
                 withContext(Dispatchers.IO) {
-                    call.respond(AddressRepository.getAddressBalance(address))
+                    call.respond(CoreAddressRepository.getAddressBalance(address))
                 }
             }
         }
@@ -70,7 +71,7 @@ fun Routing.addressRoutes() {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
                 withContext(Dispatchers.IO) {
-                    call.respond(AddressRepository.getAddressNonce(address))
+                    call.respond(CoreAddressRepository.getAddressNonce(address))
                 }
             }
         }

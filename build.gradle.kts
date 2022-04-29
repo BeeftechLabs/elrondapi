@@ -21,7 +21,9 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":core"))
     implementation(project(":googlestorage"))
+    implementation(project(":zoidpay"))
 
     implementation("io.ktor:ktor-server-core:$ktor_version")
 //    implementation("io.ktor:ktor-locations:2.0.0-eap-271")
@@ -35,7 +37,6 @@ dependencies {
     implementation("io.ktor:ktor-client-serialization:$ktor_version")
     implementation("ch.qos.logback:logback-classic:$logback_version")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.2")
-    implementation("com.sksamuel.hoplite:hoplite-yaml:1.4.16")
     implementation("co.elastic.clients:elasticsearch-java:7.16.3")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.13.1")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.1")

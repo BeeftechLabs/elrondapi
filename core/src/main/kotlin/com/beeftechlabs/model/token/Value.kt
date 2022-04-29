@@ -2,7 +2,9 @@ package com.beeftechlabs.model.token
 
 import com.beeftechlabs.repository.token.TokenRepository
 import com.beeftechlabs.util.denominatedBigDecimal
+import com.beeftechlabs.util.nominated
 import com.beeftechlabs.util.toDouble
+import com.ionspin.kotlin.bignum.decimal.BigDecimal
 import com.ionspin.kotlin.bignum.integer.BigInteger
 import com.ionspin.kotlin.bignum.integer.toBigInteger
 import kotlinx.serialization.Serializable
@@ -34,6 +36,8 @@ data class Value(
             this
         }
     }
+
+    fun hexValue(): String = BigInteger.parseString(bigNumber).toString(16)
 
     companion object {
         val None = Value("", 0, null, "")
@@ -82,6 +86,21 @@ data class Value(
                     onError?.invoke()
                 }
             } else {
+                onError?.invoke()
+            }
+
+        suspend fun extract(value: Double, tokenId: String, onError: (() -> Value)? = null) =
+            try {
+                val decimals = TokenRepository.getDecimalsForToken(tokenId)
+                val nominated = BigDecimal.fromDouble(value).nominated(decimals).toBigInteger().toString()
+                Value(
+                    bigNumber = nominated,
+                    decimals = decimals,
+                    denominated = value,
+                    token = tokenId
+                )
+            } catch (exception: Exception) {
+                logger.error(exception) { "Error extracting value $value from Double" }
                 onError?.invoke()
             }
 

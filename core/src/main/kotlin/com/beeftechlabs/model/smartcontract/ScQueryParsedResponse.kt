@@ -12,15 +12,19 @@ data class ScQueryParsedResponse(
 data class ScQueryResultData(
     val string: String?,
     val bigNumber: String?,
-    val int: Int?,
-    val double: Double?
+    val long: Long?,
+    val double: Double?,
+    val hex: String?,
+    val boolean: Boolean?
 ) {
     companion object {
         fun fromString(result: String) = ScQueryResultData(
             string = tryOrNull { result.fromBase64String() },
             bigNumber = tryOrNull { result.fromBase64ToHexString().bigInteger().toString() },
-            int = tryOrNull { result.fromBase64ToHexString().toInt(16) },
+            long = tryOrNull { result.fromBase64ToHexString().toLong(16) },
             double = tryOrNull { result.fromBase64ToHexString().bigDecimal().toDouble() },
+            hex = tryOrNull { result.fromBase64ToHexString() },
+            boolean = tryOrNull { result.fromBase64ToHexString().toInt(16) > 0 }
         )
     }
 }

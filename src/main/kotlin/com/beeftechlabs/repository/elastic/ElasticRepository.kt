@@ -8,15 +8,15 @@ import com.beeftechlabs.model.core.StakingProvider
 import com.beeftechlabs.model.delegation.Delegator
 import com.beeftechlabs.model.delegation.DelegatorsResponse
 import com.beeftechlabs.model.token.Value
-import com.beeftechlabs.model.transaction.*
+import com.beeftechlabs.model.transaction.ScResult
+import com.beeftechlabs.model.transaction.Transaction
+import com.beeftechlabs.model.transaction.TransactionsRequest
+import com.beeftechlabs.model.transaction.TransactionsResponse
 import com.beeftechlabs.plugins.endCustomTrace
 import com.beeftechlabs.plugins.startCustomTrace
 import com.beeftechlabs.processing.TransactionProcessor
 import com.beeftechlabs.repository.address.model.AddressSort
-import com.beeftechlabs.repository.elastic.model.ElasticAddress
-import com.beeftechlabs.repository.elastic.model.ElasticDelegation
-import com.beeftechlabs.repository.elastic.model.ElasticScResult
-import com.beeftechlabs.repository.elastic.model.ElasticTransaction
+import com.beeftechlabs.repository.elastic.model.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.time.Duration.Companion.minutes
@@ -83,11 +83,11 @@ object ElasticRepository {
                     }
                 }
             }
-            if (request.dataFilter != null) {
+            request.dataFilter?.let { dataFilter ->
                 filter {
                     regex {
                         name = "data"
-                        value = request.dataFilter
+                        value = dataFilter
                     }
                 }
             }

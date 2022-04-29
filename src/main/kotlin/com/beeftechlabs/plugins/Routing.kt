@@ -1,6 +1,7 @@
 package com.beeftechlabs.plugins
 
 import com.beeftechlabs.routing.*
+import com.beeftechlabs.zoidpay.routing.zoidpayRoutes
 import io.ktor.server.application.*
 import io.ktor.server.http.content.*
 import io.ktor.server.routing.*
@@ -21,5 +22,6 @@ fun Application.configureRouting() {
         mdexRoutes()
         adminRoutes()
         customScRoutes()
+        zoidpayRoutes()
     }
 }

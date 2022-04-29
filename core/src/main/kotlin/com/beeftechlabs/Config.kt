@@ -1,5 +1,16 @@
 package com.beeftechlabs
 
+import com.sksamuel.hoplite.ConfigLoader
+import java.io.File
+
+val config = ConfigLoader().loadConfigOrThrow<Config>(
+    listOfNotNull(
+        File("config-zoidpay.yaml").takeIf { it.exists() },
+        File("config-dev.yaml").takeIf { it.exists() },
+        File("config.yaml")
+    )
+)
+
 data class Config(
     val port: Int,
     val elastic: Elastic? = null,
@@ -9,7 +20,8 @@ data class Config(
     val memoryStore: Boolean,
     val secret: String = "",
     val traceCalls: Boolean = false,
-    val googleStorage: GoogleStorage? = null
+    val googleStorage: GoogleStorage? = null,
+    val zoidpay: ZoidPayConfig? = null
 ) {
     val hasElastic = elastic != null
     val hasElrondConfig = elrond != null
@@ -40,4 +52,9 @@ data class Redis(
 data class GoogleStorage(
     val enabled: Boolean,
     val bucket: String
+)
+
+data class ZoidPayConfig(
+    val tokenId: String,
+    val stakingSC: String
 )

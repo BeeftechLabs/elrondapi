@@ -7,6 +7,7 @@ import com.beeftechlabs.model.token.Value
 import com.beeftechlabs.plugins.endCustomTrace
 import com.beeftechlabs.plugins.startCustomTrace
 import com.beeftechlabs.repository.StakingRepository
+import com.beeftechlabs.repository.address.CoreAddressRepository.getAccountFromGateway
 import com.beeftechlabs.repository.address.model.Account
 import com.beeftechlabs.repository.address.model.AddressSort
 import com.beeftechlabs.repository.address.model.GetAccountResponse
@@ -56,14 +57,6 @@ object AddressRepository {
         endCustomTrace("AddressDetails:$address")
     }
 
-    suspend fun getAddressBalance(address: String): Value = Value.extract(
-        getAccountFromGateway(address).balance,
-        "EGLD"
-    ) ?: Value.zeroEgld()
-
-    suspend fun getAddressNonce(address: String): LongValue =
-        LongValue(getAccountFromGateway(address).nonce)
-
     suspend fun getAddresses(
         sort: AddressSort,
         pageSize: Int,
@@ -76,7 +69,4 @@ object AddressRepository {
             endCustomTrace("GetAddresses:$sort:$pageSize:$filter")
         }
     }
-
-    private suspend fun getAccountFromGateway(address: String): Account =
-        GatewayService.get<GetAccountResponse>("address/$address").data.account
 }

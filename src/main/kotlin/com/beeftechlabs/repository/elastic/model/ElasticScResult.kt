@@ -1,5 +1,6 @@
 package com.beeftechlabs.repository.elastic.model
 
+import com.beeftechlabs.model.transaction.ScResult
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
@@ -18,4 +19,21 @@ data class ElasticScResult(
     @JsonProperty("hasOperations") val hasOperations: Boolean,
     @JsonProperty("tokens") val tokens: List<String>?,
     @JsonProperty("esdtValues") val esdtValues: List<String>?
+)
+
+fun ElasticScResult.toScResult(hash: String) = ScResult(
+    hash = hash,
+    sender = sender,
+    receiver = receiver,
+    value = value,
+    data = data ?: "",
+    nonce = nonce,
+    gasLimit = gasLimit,
+    gasPrice = gasPrice,
+    timestamp = timestamp,
+    prevTxHash = prevTxHash,
+    originalTxHash = originalTxHash,
+    hasOperations = hasOperations,
+    tokens = tokens ?: emptyList(),
+    esdtValues = esdtValues ?: emptyList()
 )

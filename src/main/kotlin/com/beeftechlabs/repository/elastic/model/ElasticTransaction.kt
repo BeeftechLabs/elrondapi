@@ -1,5 +1,8 @@
 package com.beeftechlabs.repository.elastic.model
 
+import com.beeftechlabs.model.token.Value
+import com.beeftechlabs.model.transaction.Transaction
+import com.beeftechlabs.model.transaction.TransactionType
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
@@ -23,4 +26,32 @@ data class ElasticTransaction(
     @JsonProperty("tokens") val tokens: List<String>? = null,
     @JsonProperty("esdtValues") val esdtValues: List<String>? = null,
     @JsonProperty("status") val status: String
+)
+
+suspend fun ElasticTransaction.toTransaction(hash: String) = Transaction(
+    hash = hash,
+    sender = sender,
+    receiver = receiver,
+    transactionValue = Value.extract(value, "EGLD") ?: Value.zeroEgld(),
+    outValues = emptyList(),
+    inValues = emptyList(),
+    outValuesRaw = emptyList(),
+    inValuesRaw = emptyList(),
+    data = data ?: "",
+    nonce = nonce,
+    gasLimit = gasLimit,
+    gasPrice = gasPrice,
+    gasUsed = gasUsed,
+    fee = Value.extract(fee, "EGLD") ?: Value.zeroEgld(),
+    timestamp = timestamp,
+    senderShard = senderShard,
+    receiverShard = receiverShard,
+    tokens = tokens ?: emptyList(),
+    esdtValues = esdtValues ?: emptyList(),
+    status = status,
+    type = TransactionType.Unknown,
+    function = "",
+    hasScResults = hasScResults,
+    isScCall = isScCall,
+    scResults = emptyList()
 )

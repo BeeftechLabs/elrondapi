@@ -1,10 +1,10 @@
 package com.beeftechlabs.plugins
 
 import com.beeftechlabs.config
-import io.ktor.server.plugins.*
-import org.slf4j.event.*
 import io.ktor.server.application.*
+import io.ktor.server.plugins.callloging.*
 import io.ktor.server.request.*
+import org.slf4j.event.Level
 
 fun Application.configureMonitoring() {
     install(CallLogging) {
