@@ -42,3 +42,6 @@ private val denominations = mutableMapOf<Int, BigDecimal>().apply {
 private fun denomination(decimals: Int): BigDecimal = denominations[decimals] ?: run {
     BigDecimal.TEN.pow(decimals).also { denominations[decimals] = it }
 }
+
+fun String.ensureHexLength() =
+    if (length.isOdd()) "0$this" else this

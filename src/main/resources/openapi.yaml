@@ -76,7 +76,7 @@ tags:
       <SchemaDefinition schemaRef="#/components/schemas/TokenPairDetails" />
 
   - name: "zoidpay"
-    description: "ZoidPay Staking API"
+    description: "ZoidPay Staking API - WIP, not live"
   - name: "zoidpaystake_model"
     x-displayName: Stake
     description: |
@@ -1641,7 +1641,7 @@ definitions:
   ZoidPayStake:
     type: "object"
     properties:
-      address:
+      pool:
         type: "string"
       stakedAmount:
         $ref: '#/definitions/Value'

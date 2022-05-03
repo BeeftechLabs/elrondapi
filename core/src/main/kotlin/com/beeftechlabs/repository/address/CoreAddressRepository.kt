@@ -11,7 +11,7 @@ object CoreAddressRepository {
     suspend fun getAddressBalance(address: String): Value = Value.extract(
         getAccountFromGateway(address).balance,
         "EGLD"
-    ) ?: Value.zeroEgld()
+    )
 
     suspend fun getAddressNonce(address: String): LongValue =
         LongValue(getAccountFromGateway(address).nonce)

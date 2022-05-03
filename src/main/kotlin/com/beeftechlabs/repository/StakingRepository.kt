@@ -87,14 +87,14 @@ object StakingRepository {
 
             delegations.map { delegation ->
                 delegation.copy(
-                    value = actualDelegations.await()[delegation.stakingProvider.address] ?: Value.zeroEgld(),
+                    value = actualDelegations.await()[delegation.stakingProvider.address] ?: Value.ZeroEgld,
                     stakingProvider = providers.await().find { it.address == delegation.stakingProvider.address }
                         ?: delegation.stakingProvider,
                     undelegatedList = undelegations.await()[delegation.stakingProvider.address] ?: emptyList(),
-                    claimable = claimables.await()[delegation.stakingProvider.address] ?: Value.zeroEgld(),
-                    totalRewards = totalRewards.await()[delegation.stakingProvider.address] ?: Value.zeroEgld()
+                    claimable = claimables.await()[delegation.stakingProvider.address] ?: Value.ZeroEgld,
+                    totalRewards = totalRewards.await()[delegation.stakingProvider.address] ?: Value.ZeroEgld
                 )
-            }.filter { (it.value.denominated ?: 0.0) > 0 || it.undelegatedList.isNotEmpty() }
+            }.filter { it.value.denominated > 0 || it.undelegatedList.isNotEmpty() }
         }.also {
             endCustomTrace("GetDelegations:$address")
         }
@@ -175,7 +175,7 @@ object StakingRepository {
 
         return response.firstOrNull()?.takeIf { it.isNotEmpty() }
             ?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
-            ?: Value.zeroEgld()
+            ?: Value.ZeroEgld
     }
 
     private suspend fun getAddressUndelegatedListForContract(
@@ -194,7 +194,7 @@ object StakingRepository {
             val timeLeft = roundsUntilComplete * networkConfig.roundDuration
 
             UndelegatedValue(
-                Value.extractHex(valueBase64.fromBase64ToHexString(), "EGLD") ?: Value.zeroEgld(),
+                Value.extractHex(valueBase64.fromBase64ToHexString(), "EGLD"),
                 timeLeft.coerceAtLeast(0)
             )
         }
@@ -208,7 +208,7 @@ object StakingRepository {
 
         return response.firstOrNull()?.takeIf { it.isNotEmpty() }
             ?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
-            ?: Value.zeroEgld()
+            ?: Value.ZeroEgld
     }
 
     private suspend fun getAddressTotalRewardsForContract(
@@ -219,7 +219,7 @@ object StakingRepository {
 
         return response.firstOrNull()?.takeIf { it.isNotEmpty() }
             ?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
-            ?: Value.zeroEgld()
+            ?: Value.ZeroEgld
     }
 
     suspend fun getStaked(address: String): Pair<Value?, List<Unstaked>> = coroutineScope {
@@ -231,11 +231,11 @@ object StakingRepository {
 
             val staked =
                 stakedResponse.await().firstOrNull()?.let { Value.extractHex(it.fromBase64ToHexString(), "EGLD") }
-                    ?: Value.zeroEgld()
+                    ?: Value.ZeroEgld
             val unstaked = unstakedResponse.await()
                 .chunked(2).map { (value, epochsRemaining) ->
                     Unstaked(
-                        Value.extractHex(value.fromBase64ToHexString(), "EGLD") ?: Value.zeroEgld(),
+                        Value.extractHex(value.fromBase64ToHexString(), "EGLD"),
                         epochsRemaining.fromBase64ToHexString().takeIf { it.isNotEmpty() }
                             ?.toBigInteger(16)?.intValue() ?: 0
                     )

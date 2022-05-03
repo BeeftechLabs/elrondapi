@@ -51,7 +51,7 @@ enum class CacheType(val ttl: Duration, val isAtomic: Boolean) {
     Nodes(1.hours, true),
     NetworkConfig(5.minutes, true),
     NetworkStatus(5.minutes, true),
-    AddressDelegations(30.seconds, false),
+    AddressDelegations(12.seconds, false),
     AddressStake(30.seconds, false),
     AddressTotalRewards(24.hours, false),
     Nfts(1.hours, true),
@@ -60,7 +60,10 @@ enum class CacheType(val ttl: Duration, val isAtomic: Boolean) {
     TokenPairDetails(5.minutes, false),
     TokenAssets(1.days, true),
     ZoidPayDelegators(1.hours, true),
-    ZoidPayDelegatorsDetails(1.hours, true);
+    ZoidPayDelegatorsDetails(1.hours, true),
+    ZoidPayAddressStake(12.seconds, false),
+    ZoidPayAddressClaimable(30.seconds, false),
+    ZoidPayAddressClaimablePerStake(30.seconds, false);
 
     val mutex = Mutex()
 }

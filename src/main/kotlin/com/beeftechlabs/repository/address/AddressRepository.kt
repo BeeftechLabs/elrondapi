@@ -43,7 +43,7 @@ object AddressRepository {
         AddressDetails(
             address = address,
             nonce = account.nonce,
-            balance = Value.extract(account.balance, "EGLD") ?: Value.zeroEgld(),
+            balance = Value.extract(account.balance, "EGLD"),
             herotag = account.username,
             ownerAddress = account.ownerAddress,
             tokens = tokens.await(),

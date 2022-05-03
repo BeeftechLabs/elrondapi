@@ -4,22 +4,22 @@ import com.beeftechlabs.config
 import com.beeftechlabs.model.address.Address
 import com.beeftechlabs.model.token.Value
 import com.beeftechlabs.model.transaction.NewTransaction
+import com.beeftechlabs.util.ensureHexLength
 import com.beeftechlabs.util.toHexString
-import io.ktor.util.*
 
 object CreateTransactionUsecase {
 
     private val zoidPayConfig by lazy { config.zoidpay!! }
 
     fun stake(address: String, pool: String, value: Value, numMonths: Int, nonce: Long): NewTransaction {
-        val tokenId = value.token.toHexString()
+        val tokenIdHex = value.token.toHexString()
         val hexValue = value.hexValue()
         val hexPool = Address(pool).hex
-        val hexMonths = numMonths.toString(16)
+        val hexMonths = numMonths.toString(16).ensureHexLength()
 
         return NewTransaction(
             chainId = "1",
-            data = "ESDTTransfer@$tokenId@$hexValue$STAKE_FUNC$hexPool$hexMonths".encodeBase64(),
+            data = "ESDTTransfer@$tokenIdHex@$hexValue@$STAKE_FUNC@$hexPool@$hexMonths",
             gasLimit = 10000000,
             gasPrice = 1000000000,
             nonce = nonce,
@@ -27,14 +27,14 @@ object CreateTransactionUsecase {
             sender = address,
             signature = "",
             value = "0",
-            version = 2
+            version = 1
         )
     }
 
     fun claim(address: String, nonce: Long): NewTransaction {
         return NewTransaction(
             chainId = "1",
-            data = "claimRewards".encodeBase64(),
+            data = "claimRewards",
             gasLimit = 10000000,
             gasPrice = 1000000000,
             nonce = nonce,
@@ -42,7 +42,7 @@ object CreateTransactionUsecase {
             sender = address,
             signature = "",
             value = "0",
-            version = 2
+            version = 1
         )
     }
 

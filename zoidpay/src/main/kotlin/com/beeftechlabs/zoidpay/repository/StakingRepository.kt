@@ -89,64 +89,114 @@ object StakingRepository {
         }
     }
 
-    suspend fun getStakesForDelegator(address: String): List<Stake> {
-        startCustomTrace("zoidpay:getStakesForDelegator:$address")
+    suspend fun getStakesForDelegatorNew(address: String): List<Stake> =
+        withCache(CacheType.ZoidPayAddressStake, instance = address) {
+            startCustomTrace("zoidpay:getStakesForDelegator:$address")
 
-        val scQuery = SCService.vmQueryParsed(ScQueryRequest(
-            scAddress = zoidPayConfig.stakingSC,
-            funcName = "getStakesForDelegator",
-            args = listOf(Address(address).hex)
-        ))
-
-        return scQuery.output.chunked(5).map { (address, stakedAmount, timestamp, months, isPool) ->
-            Stake(
-                address.hex?.let { Address(it).erd } ?: "",
-                stakedAmount.bigNumber?.let { Value.extract(it, zoidPayConfig.tokenId) }
-                    ?: Value.zero(zoidPayConfig.tokenId),
-                timestamp.long ?: 0,
-                months.long?.toInt() ?: 0,
-                isPool.boolean ?: false
+            val scQuery = SCService.vmQueryParsed(
+                ScQueryRequest(
+                    scAddress = zoidPayConfig.stakingSC,
+                    funcName = "getStakesForDelegator",
+                    args = listOf(Address(address).hex)
+                )
             )
-        }.also {
-            endCustomTrace("zoidpay:getStakesForDelegator:$address")
+
+            scQuery.output.chunked(5).map { (address, stakedAmount, timestamp, months, isPool) ->
+                Stake(
+                    address.hex?.let { Address(it).erd } ?: "",
+                    stakedAmount.bigNumber?.let { Value.extract(it, zoidPayConfig.tokenId) }
+                        ?: Value.zero(zoidPayConfig.tokenId),
+                    timestamp.long ?: 0,
+                    months.long?.toInt() ?: 0,
+                    isPool.boolean ?: false
+                )
+            }.also {
+                endCustomTrace("zoidpay:getStakesForDelegator:$address")
+            }
         }
-    }
 
-    suspend fun getClaimableRewards(address: String): Value {
-        startCustomTrace("zoidpay:getClaimableRewards:$address")
+    suspend fun getStakesForDelegator(address: String): List<Stake> =
+        withCache(CacheType.ZoidPayAddressStake, instance = address) {
+            startCustomTrace("zoidpay:getStakesForDelegator:$address")
 
-        val scQuery = SCService.vmQueryParsed(ScQueryRequest(
-            scAddress = zoidPayConfig.stakingSC,
-            funcName = "claimableRewards",
-            args = listOf(Address(address).hex)
-        ))
-
-        return scQuery.output.firstOrNull()?.bigNumber?.let { Value.extract(it, zoidPayConfig.tokenId) } ?: Value.zero(
-            zoidPayConfig.tokenId).also {
-            endCustomTrace("zoidpay:getClaimableRewards:$address")
-        }
-    }
-
-    suspend fun getClaimableRewardsPerStake(address: String): List<ClaimableReward> {
-        startCustomTrace("zoidpay:getStakesForDelegator:$address")
-
-        val scQuery = SCService.vmQueryParsed(ScQueryRequest(
-            scAddress = zoidPayConfig.stakingSC,
-            funcName = "getStakeRewards",
-            args = listOf(Address(address).hex)
-        ))
-
-        return scQuery.output.chunked(3).map { (pool, timestamp, reward) ->
-            ClaimableReward(
-                pool.hex?.let { Address(it).erd } ?: "",
-                timestamp.long ?: 0,
-                reward.bigNumber?.let { Value.extract(it, zoidPayConfig.tokenId) }
-                    ?: Value.zero(zoidPayConfig.tokenId)
+            val scQuery = SCService.vmQueryParsed(
+                ScQueryRequest(
+                    scAddress = zoidPayConfig.stakingSC,
+                    funcName = "getStaking",
+                    args = listOf(Address(address).hex)
+                )
             )
-        }.also {
-            endCustomTrace("zoidpay:getStakesForDelegator:$address")
+
+            scQuery.output.mapNotNull { scResult ->
+                scResult.hex?.let { hex ->
+                    var data = hex
+                    val poolAddressHex = data.take(64)
+                    data = data.drop(64)
+                    val amtSize = data.take(8).toInt(16) * 2
+                    data = data.drop(8)
+                    val stakeAmt = data.take(amtSize)
+                    data = data.drop(amtSize)
+                    val timestamp = data.take(16).toLong(16)
+                    data = data.drop(16)
+                    val months = data.take(4).toInt(16)
+                    data = data.drop(4)
+                    val isPool = data.take(2).toInt(16) > 0
+                    Stake(
+                        Address(poolAddressHex).erd,
+                        Value.extractHex(stakeAmt, zoidPayConfig.tokenId),
+                        timestamp,
+                        months,
+                        isPool
+                    )
+                }
+            }.also {
+                endCustomTrace("zoidpay:getStakesForDelegator:$address")
+            }
         }
-    }
+
+    suspend fun getClaimableRewards(address: String): Value =
+        withCache(CacheType.ZoidPayAddressClaimable, instance = address) {
+            startCustomTrace("zoidpay:getClaimableRewards:$address")
+
+            val scQuery = SCService.vmQueryParsed(
+                ScQueryRequest(
+                    scAddress = zoidPayConfig.stakingSC,
+                    funcName = "claimableRewards",
+                    args = listOf(Address(address).hex)
+                )
+            )
+
+            scQuery.output.firstOrNull()?.bigNumber?.let { Value.extract(it, zoidPayConfig.tokenId) }
+                ?: Value.zero(
+                    zoidPayConfig.tokenId
+                ).also {
+                    endCustomTrace("zoidpay:getClaimableRewards:$address")
+                }
+        }
+
+    suspend fun getClaimableRewardsPerStake(address: String): List<ClaimableReward> =
+        withCache(CacheType.ZoidPayAddressClaimablePerStake, instance = address) {
+            startCustomTrace("zoidpay:getStakesForDelegator:$address")
+
+            val scQuery = SCService.vmQueryParsed(
+                ScQueryRequest(
+                    scAddress = zoidPayConfig.stakingSC,
+                    funcName = "getStakeRewards",
+                    args = listOf(Address(address).hex)
+                )
+            )
+
+            scQuery.output.chunked(3).map { (pool, timestamp, reward) ->
+                ClaimableReward(
+                    pool.hex?.let { Address(it).erd } ?: "",
+                    timestamp.long ?: 0,
+                    reward.bigNumber?.let { Value.extract(it, zoidPayConfig.tokenId) }
+                        ?: Value.zero(zoidPayConfig.tokenId)
+                )
+            }.also {
+                endCustomTrace("zoidpay:getStakesForDelegator:$address")
+            }
+        }
 }
 
 @Serializable

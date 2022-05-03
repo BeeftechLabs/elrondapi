@@ -254,9 +254,9 @@ object ElasticRepository {
         return result.data.map { delegation ->
             AddressDelegation(
                 stakingProvider = StakingProvider(address = delegation.item.contract, ""),
-                value = Value.extract(delegation.item.activeStake, "EGLD") ?: Value.zeroEgld(),
-                claimable = Value.None,
-                totalRewards = Value.None
+                value = Value.extract(delegation.item.activeStake, "EGLD"),
+                claimable = Value.ZeroEgld,
+                totalRewards = Value.ZeroEgld
             )
         }
     }
@@ -302,19 +302,19 @@ object ElasticRepository {
         val delegators = result.data.map { delegation ->
             Delegator(
                 address = delegation.item.address,
-                value = Value.extract(delegation.item.activeStake, "EGLD") ?: Value.zeroEgld()
+                value = Value.extract(delegation.item.activeStake, "EGLD")
             )
         }
 
         if (delegators.isNotEmpty()) {
             val firstResult = when (sort) {
                 AddressSort.AddressAsc, AddressSort.AddressDesc -> delegators.first().address
-                AddressSort.BalanceAsc, AddressSort.BalanceDesc -> delegators.first().value.denominated?.toString()
+                AddressSort.BalanceAsc, AddressSort.BalanceDesc -> delegators.first().value.denominated.toString()
             }
 
             val lastResult = when (sort) {
                 AddressSort.AddressAsc, AddressSort.AddressDesc -> delegators.last().address
-                AddressSort.BalanceAsc, AddressSort.BalanceDesc -> delegators.last().value.denominated?.toString()
+                AddressSort.BalanceAsc, AddressSort.BalanceDesc -> delegators.last().value.denominated.toString()
             }
 
             return DelegatorsResponse(

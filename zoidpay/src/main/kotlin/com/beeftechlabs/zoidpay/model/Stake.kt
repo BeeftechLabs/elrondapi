@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Stake(
-    val address: String,
+    val pool: String,
     val stakedAmount: Value,
     val timestamp: Long,
     val months: Int,

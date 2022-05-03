@@ -2,6 +2,7 @@ package com.beeftechlabs.model.token
 
 import com.beeftechlabs.repository.token.TokenRepository
 import com.beeftechlabs.util.denominatedBigDecimal
+import com.beeftechlabs.util.ensureHexLength
 import com.beeftechlabs.util.nominated
 import com.beeftechlabs.util.toDouble
 import com.ionspin.kotlin.bignum.decimal.BigDecimal
@@ -14,14 +15,14 @@ import mu.KotlinLogging
 data class Value(
     val bigNumber: String,
     val decimals: Int,
-    val denominated: Double?,
+    val denominated: Double,
     val token: String
 ) {
     operator fun plus(other: Value): Value {
         return if (token == other.token) {
             val first = BigInteger.parseString(bigNumber)
             val second = BigInteger.parseString(other.bigNumber)
-            Value(first.add(second).toString(), decimals, denominated?.plus(other.denominated ?: 0.0), token)
+            Value(first.add(second).toString(), decimals, denominated.plus(other.denominated), token)
         } else {
             this
         }
@@ -31,30 +32,30 @@ data class Value(
         return if (token == other.token) {
             val first = BigInteger.parseString(bigNumber)
             val second = BigInteger.parseString(other.bigNumber)
-            Value(first.minus(second).toString(), decimals, denominated?.minus(other.denominated ?: 0.0), token)
+            Value(first.minus(second).toString(), decimals, denominated.minus(other.denominated), token)
         } else {
             this
         }
     }
 
-    fun hexValue(): String = BigInteger.parseString(bigNumber).toString(16)
+    fun hexValue(): String = BigInteger.parseString(bigNumber).toString(16).ensureHexLength()
 
     companion object {
-        val None = Value("", 0, null, "")
+        val None = Value("0", 0, 0.0, "")
+
+        val ZeroEgld = zero("EGLD")
 
         private const val MAX_PARSING_LENGTH = 64
 
         fun zero(token: String) = Value("0", 0, 0.0, token)
 
-        fun zeroEgld() = zero("EGLD")
-
-        suspend fun extractHex(bigNumber: String, tokenId: String, onError: (() -> Value)? = null) =
+        suspend fun extractHex(bigNumber: String, tokenId: String, onError: (() -> Value) = { zero(tokenId) }): Value =
             if (bigNumber.isNotEmpty() && bigNumber.length < MAX_PARSING_LENGTH) {
                 try {
                     val decimals = TokenRepository.getDecimalsForToken(tokenId)
                     val bigInteger = bigNumber.toBigInteger(16)
                     val denominated = bigInteger.denominatedBigDecimal(decimals = decimals).toDouble()
-                        .takeIf { it.isFinite() }
+                        .takeIf { it.isFinite() } ?: 0.0
                     Value(
                         bigNumber = bigInteger.toString(),
                         decimals = decimals,
@@ -63,18 +64,19 @@ data class Value(
                     )
                 } catch (exception: Exception) {
                     logger.error(exception) { "Error extracting value $bigNumber from hex string" }
-                    onError?.invoke()
+                    onError()
                 }
             } else {
-                onError?.invoke()
+                logger.error { "Error extracting value, big number is empty" }
+                onError()
             }
 
-        suspend fun extract(bigNumber: String, tokenId: String, onError: (() -> Value)? = null) =
+        suspend fun extract(bigNumber: String, tokenId: String, onError: (() -> Value) = { zero(tokenId) }) =
             if (bigNumber.isNotEmpty()) {
                 try {
                     val decimals = TokenRepository.getDecimalsForToken(tokenId)
                     val denominated = bigNumber.denominatedBigDecimal(isHex = false, decimals = decimals).toDouble()
-                        .takeIf { it.isFinite() }
+                        .takeIf { it.isFinite() } ?: 0.0
                     Value(
                         bigNumber = bigNumber,
                         decimals = decimals,
@@ -83,10 +85,11 @@ data class Value(
                     )
                 } catch (exception: Exception) {
                     logger.error(exception) { "Error extracting value $bigNumber from string" }
-                    onError?.invoke()
+                    onError()
                 }
             } else {
-                onError?.invoke()
+                logger.error { "Error extracting value, big number is empty" }
+                onError()
             }
 
         suspend fun extract(value: Double, tokenId: String, onError: (() -> Value)? = null) =
