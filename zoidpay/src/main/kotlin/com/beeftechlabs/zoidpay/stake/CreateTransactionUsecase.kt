@@ -11,6 +11,8 @@ object CreateTransactionUsecase {
 
     private val zoidPayConfig by lazy { config.zoidpay!! }
 
+    private val defaultPoolHex by lazy { Address(zoidPayConfig.pool).hex }
+
     fun stake(address: String, pool: String, value: Value, numMonths: Int, nonce: Long): NewTransaction {
         val tokenIdHex = value.token.toHexString()
         val hexValue = value.hexValue()
@@ -31,10 +33,11 @@ object CreateTransactionUsecase {
         )
     }
 
-    fun claim(address: String, nonce: Long): NewTransaction {
+    fun claim(address: String, nonce: Long, pool: String?): NewTransaction {
+        val poolHex = pool?.let { Address(it).hex } ?: defaultPoolHex
         return NewTransaction(
             chainId = "1",
-            data = "claimRewards",
+            data = "claimRewards@$poolHex",
             gasLimit = 10000000,
             gasPrice = 1000000000,
             nonce = nonce,

@@ -56,5 +56,6 @@ data class GoogleStorage(
 
 data class ZoidPayConfig(
     val tokenId: String,
-    val stakingSC: String
+    val stakingSC: String,
+    val pool: String
 )

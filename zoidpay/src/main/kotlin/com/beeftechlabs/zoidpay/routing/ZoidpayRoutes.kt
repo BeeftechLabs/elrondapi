@@ -98,12 +98,13 @@ fun Routing.zoidpayRoutes() {
 
         get("/zoidpay/{address}/transaction/claim") {
             val address = call.parameters["address"]
+            val optPool = call.request.queryParameters["pool"]
             if (address.isNullOrEmpty()) {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
                 withContext(Dispatchers.IO) {
                     val nonce = CoreAddressRepository.getAddressNonce(address).value
-                    call.respond(CreateTransactionUsecase.claim(address, nonce))
+                    call.respond(CreateTransactionUsecase.claim(address, nonce, optPool))
                 }
             }
         }
