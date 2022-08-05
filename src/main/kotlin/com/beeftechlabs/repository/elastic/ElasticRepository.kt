@@ -158,7 +158,7 @@ object ElasticRepository {
         }
 
         val filteredTransaction = request.decodedDataFilter?.let { decodedDataFilter ->
-            processedTransactions.filter { it.decodedData.matches(decodedDataFilter.toRegex()) }
+            processedTransactions.filter { it.decodedData?.matches(decodedDataFilter.toRegex()) == true }
         } ?: processedTransactions
 
         return TransactionsResponse(
