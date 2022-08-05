@@ -5,7 +5,13 @@ import com.soywiz.krypto.encoding.fromBase64
 import com.soywiz.krypto.encoding.fromHex
 import com.soywiz.krypto.encoding.hexLower
 
-fun String.fromHexString(): String = fromHex().decodeToString()
+fun String.fromHexString(): String =
+    try {
+        trim().fromHex().decodeToString()
+    } catch (ex: Exception) {
+        println("Error decoding hex string: $this")
+        throw ex
+    }
 
 fun String.toHexString(): String = encodeToByteArray().hexLower
 

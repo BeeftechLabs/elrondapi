@@ -8,10 +8,7 @@ import com.beeftechlabs.model.core.StakingProvider
 import com.beeftechlabs.model.delegation.Delegator
 import com.beeftechlabs.model.delegation.DelegatorsResponse
 import com.beeftechlabs.model.token.Value
-import com.beeftechlabs.model.transaction.ScResult
-import com.beeftechlabs.model.transaction.Transaction
-import com.beeftechlabs.model.transaction.TransactionsRequest
-import com.beeftechlabs.model.transaction.TransactionsResponse
+import com.beeftechlabs.model.transaction.*
 import com.beeftechlabs.plugins.endCustomTrace
 import com.beeftechlabs.plugins.startCustomTrace
 import com.beeftechlabs.processing.TransactionProcessor
@@ -59,17 +56,26 @@ object ElasticRepository {
             index = "transactions"
             size = maxSize
             if (request.address.isNotEmpty()) {
-                must {
-                    bool {
-                        should {
-                            term {
-                                name = "sender"
-                                value = request.address
+                if (request.addressQueryType == AddressQueryType.Any) {
+                    must {
+                        bool {
+                            should {
+                                term {
+                                    name = "sender"
+                                    value = request.address
+                                }
+                                term {
+                                    name = "receiver"
+                                    value = request.address
+                                }
                             }
-                            term {
-                                name = "receiver"
-                                value = request.address
-                            }
+                        }
+                    }
+                } else {
+                    must {
+                        term {
+                            name = if (request.addressQueryType == AddressQueryType.Sender) "sender" else "receiver"
+                            value = request.address
                         }
                     }
                 }
@@ -93,7 +99,7 @@ object ElasticRepository {
             }
             sort {
                 name = "timestamp"
-                order = SortOrder.Desc
+                order = if (request.newer) SortOrder.Asc else SortOrder.Desc
             }
         }
 
@@ -151,6 +157,10 @@ object ElasticRepository {
             updatedTransactions
         }
 
+        val filteredTransaction = request.decodedDataFilter?.let { decodedDataFilter ->
+            processedTransactions.filter { it.decodedData.matches(decodedDataFilter.toRegex()) }
+        } ?: processedTransactions
+
         return TransactionsResponse(
             transactions.size == maxSize,
             if (transactions.isNotEmpty()) {
@@ -158,7 +168,7 @@ object ElasticRepository {
             } else {
                 request.startTimestamp
             },
-            processedTransactions
+            filteredTransaction
         ).also {
             endCustomTrace("GetTransactionsFullyFromElastic:${request.address}")
         }

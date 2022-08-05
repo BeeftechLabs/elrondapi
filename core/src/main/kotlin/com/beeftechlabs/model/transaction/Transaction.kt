@@ -14,6 +14,7 @@ data class Transaction(
     val outValuesRaw: List<Value>,
     val inValuesRaw: List<Value>,
     val data: String,
+    val decodedData: String,
     val nonce: Long,
     val gasLimit: Long,
     val gasPrice: Long,

@@ -53,7 +53,8 @@ object TransactionProcessor {
             type = TransactionType.Transfer,
             outValues = listOf(transaction.transactionValue),
             outValuesRaw = listOf(transaction.transactionValue),
-            inValues = emptyList()
+            inValues = emptyList(),
+            decodedData = DataDecoder.decode(data)
         )
     }
 

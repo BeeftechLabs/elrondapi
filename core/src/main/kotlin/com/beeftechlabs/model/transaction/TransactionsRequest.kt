@@ -10,5 +10,9 @@ data class TransactionsRequest(
     val newer: Boolean = true,
     val includeScResults: Boolean = false,
     val processTransactions: Boolean = false,
-    val dataFilter: String? = null
+    val dataFilter: String? = null,
+    val decodedDataFilter: String? = null,
+    val addressQueryType: AddressQueryType = AddressQueryType.Any
 )
+
+enum class AddressQueryType { Any, Sender, Receiver }

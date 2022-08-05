@@ -3,6 +3,8 @@ package com.beeftechlabs.repository.elastic.model
 import com.beeftechlabs.model.token.Value
 import com.beeftechlabs.model.transaction.Transaction
 import com.beeftechlabs.model.transaction.TransactionType
+import com.beeftechlabs.processing.DataDecoder
+import com.beeftechlabs.util.fromBase64String
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
 
@@ -38,6 +40,7 @@ suspend fun ElasticTransaction.toTransaction(hash: String) = Transaction(
     outValuesRaw = emptyList(),
     inValuesRaw = emptyList(),
     data = data ?: "",
+    decodedData = data?.fromBase64String()?.let { DataDecoder.decode(it) } ?: "",
     nonce = nonce,
     gasLimit = gasLimit,
     gasPrice = gasPrice,
