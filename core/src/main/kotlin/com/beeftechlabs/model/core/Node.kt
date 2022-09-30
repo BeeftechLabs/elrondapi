@@ -9,8 +9,11 @@ data class Node(
     val blsKey: String,
     val type: NodeType,
     val eligible: Boolean,
-    val provider: String = "",
-    val owner: String = ""
+    val provider: String? = null,
+    val owner: String = "",
+    val stake: String = "",
+    val topUp: String = "",
+    val locked: String = "",
 )
 
 enum class NodeType {

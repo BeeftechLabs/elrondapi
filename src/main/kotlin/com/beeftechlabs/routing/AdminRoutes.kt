@@ -2,7 +2,7 @@ package com.beeftechlabs.routing
 
 import com.beeftechlabs.cache.RedisStore
 import com.beeftechlabs.config
-import com.beeftechlabs.repository.Nodes
+import com.beeftechlabs.repository.node.Nodes
 import com.beeftechlabs.repository.StakingProviders
 import com.beeftechlabs.repository.mdex.TokenPairs
 import com.beeftechlabs.repository.token.AllTokenAssets

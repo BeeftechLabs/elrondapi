@@ -1,9 +1,6 @@
 package com.beeftechlabs
 
-import com.beeftechlabs.plugins.configureHTTP
-import com.beeftechlabs.plugins.configureMonitoring
-import com.beeftechlabs.plugins.configureRouting
-import com.beeftechlabs.plugins.configureSerialization
+import com.beeftechlabs.plugins.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
 
@@ -13,5 +10,6 @@ fun main() {
         configureSerialization()
         configureMonitoring()
         configureHTTP()
+        configureCors()
     }.start(wait = true)
 }

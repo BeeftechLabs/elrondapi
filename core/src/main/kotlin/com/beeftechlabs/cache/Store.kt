@@ -49,6 +49,8 @@ enum class CacheType(val ttl: Duration, val isAtomic: Boolean) {
     Esdts(1.hours, true),
     StakingProviders(1.hours, true),
     Nodes(1.hours, true),
+    OwnerStakes(1.hours, true),
+    AllStakes(12.hours, false),
     NetworkConfig(5.minutes, true),
     NetworkStatus(5.minutes, true),
     AddressDelegations(12.seconds, false),
