@@ -1,6 +1,7 @@
 package com.beeftechlabs.routing
 
 import com.beeftechlabs.config
+import com.beeftechlabs.model.transaction.AddressQueryType
 import com.beeftechlabs.model.transaction.NewTransaction
 import com.beeftechlabs.model.transaction.TransactionsRequest
 import com.beeftechlabs.plugins.endCallTrace
@@ -39,7 +40,12 @@ fun Routing.transactionRoutes() {
                         ?: default.includeScResults,
                     processTransactions = call.request.queryParameters["processTransactions"]?.toBooleanStrictOrNull()
                         ?: default.processTransactions,
-                    dataFilter = call.request.queryParameters["dataFilter"] ?: default.dataFilter
+                    dataFilter = call.request.queryParameters["dataFilter"] ?: default.dataFilter,
+                    decodedDataFilter = call.request.queryParameters["decodedDataFilter"] ?: default.decodedDataFilter,
+                    addressQueryType = call.request.queryParameters["addressQueryType"]?.let {
+                        AddressQueryType.valueOf(it)
+                    } ?: default.addressQueryType,
+                    includesToken = call.request.queryParameters["includesToken"] ?: default.decodedDataFilter,
                 )
             }
 

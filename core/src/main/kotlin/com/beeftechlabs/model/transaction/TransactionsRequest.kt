@@ -12,7 +12,8 @@ data class TransactionsRequest(
     val processTransactions: Boolean = false,
     val dataFilter: String? = null,
     val decodedDataFilter: String? = null,
-    val addressQueryType: AddressQueryType = AddressQueryType.Any
+    val addressQueryType: AddressQueryType = AddressQueryType.Any,
+    val includesToken: String? = null,
 )
 
 enum class AddressQueryType { Any, Sender, Receiver }

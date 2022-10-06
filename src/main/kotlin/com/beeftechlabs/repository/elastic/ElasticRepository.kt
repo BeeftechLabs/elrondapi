@@ -89,7 +89,7 @@ object ElasticRepository {
                     }
                 }
             }
-            request.dataFilter?.let { dataFilter ->
+            request.dataFilter?.lowercase()?.let { dataFilter ->
                 filter {
                     regex {
                         name = "data"
@@ -119,7 +119,8 @@ object ElasticRepository {
         val maxTs = transactions.maxOf { it.timestamp }
         val minTs = transactions.minOf { it.timestamp }
 
-        val updatedTransactions = if (request.includeScResults || request.processTransactions) {
+        val hasScResults = request.includeScResults || request.processTransactions
+        val updatedTransactions = if (hasScResults) {
             var transactionsWithScResults = transactions
             startCustomTrace("GetTransactionsScResults:${request.address}")
             val allScResults = if (request.address.isNotEmpty()) {
@@ -157,9 +158,22 @@ object ElasticRepository {
             updatedTransactions
         }
 
-        val filteredTransaction = request.decodedDataFilter?.let { decodedDataFilter ->
+        val filteredByData = request.decodedDataFilter?.let { decodedDataFilter ->
             processedTransactions.filter { it.decodedData?.matches(decodedDataFilter.toRegex()) == true }
         } ?: processedTransactions
+
+        val filteredByToken = request.includesToken?.let { token ->
+            processedTransactions.filter {
+                it.outValues.any { value -> value.token == token } ||
+                        it.inValues.any { value -> value.token == token }
+            }
+        } ?: filteredByData
+
+        val final = if (!request.includeScResults && hasScResults) {
+            filteredByToken.map { it.copy(scResults = emptyList()) }
+        } else {
+            filteredByToken
+        }
 
         return TransactionsResponse(
             transactions.size == maxSize,
@@ -168,7 +182,7 @@ object ElasticRepository {
             } else {
                 request.startTimestamp
             },
-            filteredTransaction
+            final
         ).also {
             endCustomTrace("GetTransactionsFullyFromElastic:${request.address}")
         }
