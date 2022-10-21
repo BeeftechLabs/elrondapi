@@ -22,7 +22,7 @@ object CreateTransactionUsecase {
         return NewTransaction(
             chainId = "1",
             data = "ESDTTransfer@$tokenIdHex@$hexValue@$STAKE_FUNC@$hexPool@$hexMonths",
-            gasLimit = 10000000,
+            gasLimit = 12000000,
             gasPrice = 1000000000,
             nonce = nonce,
             receiver = zoidPayConfig.stakingSC,
@@ -38,7 +38,7 @@ object CreateTransactionUsecase {
         return NewTransaction(
             chainId = "1",
             data = "claimRewards@$poolHex",
-            gasLimit = 12000000,
+            gasLimit = 15000000,
             gasPrice = 1000000000,
             nonce = nonce,
             receiver = zoidPayConfig.stakingSC,
