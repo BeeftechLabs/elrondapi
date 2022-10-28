@@ -110,6 +110,19 @@ fun Routing.transactionRoutes() {
 
             endCallTrace()
         }
+    } else {
+        get("/transaction/{hash}") {
+            startCallTrace()
+
+            val hash = call.parameters["hash"]
+            if (hash.isNullOrEmpty()) {
+                call.response.status(HttpStatusCode.BadRequest)
+            } else {
+                call.respond(TransactionRepository.getTransactionState(hash))
+            }
+
+            endCallTrace()
+        }
     }
 
     if (config.hasElrondConfig) {

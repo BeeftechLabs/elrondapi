@@ -1,10 +1,12 @@
 package com.beeftechlabs.model.transaction
 
+import com.typesafe.config.Optional
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class NewTransaction(
-    val chainId: String,
+    @Optional val chainId: String? = null,
+    @Optional val chainID: String? = null,
     val data: String,
     val gasLimit: Long,
     val gasPrice: Long,
@@ -26,4 +28,4 @@ data class NewTransactionState(
 )
 
 @Serializable
-enum class NewTransactionStatus { Pending, Failed }
+enum class NewTransactionStatus { Success, Pending, Failed }
