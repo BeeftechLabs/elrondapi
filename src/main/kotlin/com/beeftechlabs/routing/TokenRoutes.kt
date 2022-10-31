@@ -45,7 +45,7 @@ fun Routing.tokenRoutes() {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
                 withContext(Dispatchers.IO) {
-                    TokenRepository.getNftWithId(identifier)?.let {
+                    TokenRepository.getNftWithCollectionId(identifier)?.let {
                         call.respond(it)
                     } ?: call.response.status(HttpStatusCode.NotFound)
                 }

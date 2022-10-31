@@ -6,16 +6,17 @@ import com.beeftechlabs.cache.withCache
 import com.beeftechlabs.config
 import com.beeftechlabs.model.address.Address
 import com.beeftechlabs.model.smartcontract.ScQueryRequest
-import com.beeftechlabs.model.token.Token
-import com.beeftechlabs.model.token.TokenProperties
-import com.beeftechlabs.model.token.TokenType
-import com.beeftechlabs.model.token.Value
+import com.beeftechlabs.model.token.*
 import com.beeftechlabs.plugins.endCustomTrace
 import com.beeftechlabs.plugins.startCustomTrace
 import com.beeftechlabs.repository.token.model.FungibleTokenResponse
 import com.beeftechlabs.repository.token.model.GetEsdtsResponse
+import com.beeftechlabs.repository.token.model.GetNftResponse
 import com.beeftechlabs.service.GatewayService
-import com.beeftechlabs.util.*
+import com.beeftechlabs.util.fromBase64String
+import com.beeftechlabs.util.fromBase64ToHexString
+import com.beeftechlabs.util.toHexString
+import com.beeftechlabs.util.tryCoroutineOrDefault
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -93,8 +94,9 @@ object TokenRepository {
                         assets = assets[commonIdentifier]
                     ))?.let {
                 Token(
-                    value = Value.extract(esdt.balance, commonIdentifier) ?: Value.zero(identifierParts.first()),
-                    properties = it
+                    value = Value.extract(esdt.balance, commonIdentifier),
+                    properties = it,
+                    data = null
                 )
             }
         }
@@ -114,24 +116,61 @@ object TokenRepository {
         val esdts = esdtsDeferred.await()
         val nfts = nftsDeferred.await().value.associateBy { it.identifier }
 
-        esdts.mapNotNull { esdt ->
+        val nftsWithoutData = esdts.mapNotNull { esdt ->
             val identifierParts = esdt.tokenIdentifier.split("-")
             val commonIdentifier = identifierParts.take(2).joinToString("-")
             (nfts[commonIdentifier]
                 ?: getTokenProperties(commonIdentifier)
                     .takeIf { it.type == TokenType.NFT })?.let {
                 Token(
-                    value = Value.extract(esdt.balance, commonIdentifier) ?: Value.zero(identifierParts.first()),
-                    properties = it
+                    value = Value.extract(esdt.balance, esdt.tokenIdentifier),
+                    properties = it,
+                    data = null
                 )
             }
         }
+
+        nftsWithoutData.chunked(NUM_PARALLEL_FETCH)
+            .map { chunk ->
+                chunk.map { token ->
+                    async {
+                        val tokenData = getNftData(address, token.value.token)
+                        token.copy(data = tokenData.copy(
+                            attributes = tokenData.attributes?.fromBase64String(),
+                            uris = tokenData.uris?.map { it.fromBase64String() }
+                        ))
+                    }
+                }.awaitAll()
+            }.flatten()
     }.also {
         endCustomTrace("NftsForAddress:$address")
     }
 
-    suspend fun getNftWithId(id: String): TokenProperties? =
-        Nfts.all().value.firstOrNull { it.identifier == id }
+    private suspend fun getNftData(address: String, id: String): TokenData {
+        val parts = id.split("-")
+        val nonce = parts.last()
+        val collection = parts.take(2).joinToString("-")
+
+        return GatewayService.get<GetNftResponse>("address/$address/nft/$collection/nonce/$nonce").data.tokenData
+    }
+
+    suspend fun getNftWithCollectionId(id: String): Token? {
+        val isCollection = id.count { it == '-' } == 1
+
+        if (isCollection) {
+            val props = Nfts.all().value.firstOrNull { it.identifier == id }
+            if (props != null) {
+                return Token(
+                    properties = props,
+                    value = Value.None,
+                    data = null
+                )
+            }
+        } else {
+            // TODO
+        }
+        return null
+    }
 
     suspend fun getSftsForAddress(address: String): List<Token> = coroutineScope {
         startCustomTrace("SftsForAddress:$address")
@@ -150,7 +189,8 @@ object TokenRepository {
                     .takeIf { it.type == TokenType.SFT })?.let {
                 Token(
                     value = Value.extract(esdt.balance, commonIdentifier) ?: Value.zero(identifierParts.first()),
-                    properties = it
+                    properties = it,
+                    data = null
                 )
             }
         }

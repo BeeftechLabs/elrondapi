@@ -21,7 +21,6 @@ fun Application.configureRouting() {
         tokenRoutes()
         mdexRoutes()
         adminRoutes()
-        customScRoutes()
         zoidpayRoutes()
     }
 }
