@@ -42,7 +42,9 @@ fun Routing.adminRoutes() {
             coroutineScope {
                 launch(Dispatchers.IO) {
                     Esdts.all(true)
-                    TokenPairs.all(true)
+                    if (config.hasElastic) {
+                        TokenPairs.all(true)
+                    }
                 }
                 launch(Dispatchers.IO) { Nfts.all(true) }
                 launch(Dispatchers.IO) { Sfts.all(true) }
