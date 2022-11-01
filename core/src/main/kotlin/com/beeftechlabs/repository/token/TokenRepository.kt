@@ -148,7 +148,7 @@ object TokenRepository {
 
     private suspend fun getNftData(address: String, id: String): TokenData {
         val parts = id.split("-")
-        val nonce = parts.last()
+        val nonce = parts.last().toInt(16)
         val collection = parts.take(2).joinToString("-")
 
         return GatewayService.get<GetNftResponse>("address/$address/nft/$collection/nonce/$nonce").data.tokenData
