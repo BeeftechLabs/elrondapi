@@ -186,12 +186,13 @@ object StakingRepository {
                 )
             )
 
-            scQuery.output.chunked(3).map { (pool, timestamp, reward) ->
+            scQuery.output.chunked(4).map { (pool, timestamp, reward, finished) ->
                 ClaimableReward(
-                    pool.hex?.let { Address(it).erd } ?: "",
-                    timestamp.long ?: 0,
-                    reward.bigNumber?.let { Value.extract(it, zoidPayConfig.tokenId) }
-                        ?: Value.zero(zoidPayConfig.tokenId)
+                    pool = pool.hex?.let { Address(it).erd } ?: "",
+                    timestamp = timestamp.long ?: 0,
+                    reward = reward.bigNumber?.let { Value.extract(it, zoidPayConfig.tokenId) }
+                        ?: Value.zero(zoidPayConfig.tokenId),
+                    finished = finished.boolean ?: false,
                 )
             }.also {
                 endCustomTrace("zoidpay:getStakesForDelegator:$address")

@@ -42,11 +42,11 @@ object TransactionRepository {
         val response: PostTransactionResponse = GatewayService.post("transaction/send", tx)
 
         return NewTransactionState(
-            hash = response.data.txHash,
+            hash = response.data?.txHash,
             receiverShard = receiverShard,
             senderShard = senderShard,
-            status = if (response.data.txHash != null) NewTransactionStatus.Pending else NewTransactionStatus.Failed,
-            error = response.data.error
+            status = if (response.data?.txHash != null) NewTransactionStatus.Pending else NewTransactionStatus.Failed,
+            error = response.data?.error ?: response.error
         )
     }
 }

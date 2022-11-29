@@ -4,7 +4,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class PostTransactionResponse(
-    val data: PostTransactionData
+    val data: PostTransactionData?,
+    val error: String? = null
 )
 
 @Serializable

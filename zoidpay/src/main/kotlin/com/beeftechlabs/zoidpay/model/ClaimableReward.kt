@@ -7,5 +7,6 @@ import kotlinx.serialization.Serializable
 data class ClaimableReward(
     val pool: String,
     val timestamp: Long,
-    val reward: Value
+    val reward: Value,
+    val finished: Boolean
 )
