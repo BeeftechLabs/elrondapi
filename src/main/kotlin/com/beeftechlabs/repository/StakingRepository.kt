@@ -35,7 +35,7 @@ object StakingRepository {
             val networkConfig = async { NetworkConfig.cached() }
             val networkStatus = async { NetworkStatus.cached() }
 
-            val delegations = ElasticRepository.getDelegations(address)
+            val delegations = if (config.hasElastic) { ElasticRepository.getDelegations(address) } else { emptyList() }
 
             val actualDelegations = async {
                 delegations.map {

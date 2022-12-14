@@ -24,7 +24,7 @@ object HttpClientFactory {
         }
         install(HttpTimeout) {
             requestTimeoutMillis = 60000
-            connectTimeoutMillis = 15000
+            connectTimeoutMillis = 30000
             socketTimeoutMillis = 60000
         }
         defaultRequest {
