@@ -94,7 +94,7 @@ object TokenRepository {
                         assets = assets[commonIdentifier]
                     ))?.let {
                 Token(
-                    value = Value.extract(esdt.balance, commonIdentifier),
+                    value = Value.extract(esdt.balance, esdt.tokenIdentifier),
                     properties = it,
                     data = null
                 )
