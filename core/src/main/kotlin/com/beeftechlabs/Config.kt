@@ -21,7 +21,8 @@ data class Config(
     val secret: String = "",
     val traceCalls: Boolean = false,
     val googleStorage: GoogleStorage? = null,
-    val zoidpay: ZoidPayConfig? = null
+    val zoidpay: ZoidPayConfig? = null,
+    val logApiCalls: Boolean,
 ) {
     val hasElastic = elastic != null
     val hasElrondConfig = elrond != null

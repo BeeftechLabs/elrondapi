@@ -1,6 +1,7 @@
 port: 8080
 maxPageSize: 100
 traceCalls: false
+logApiCalls: false
 
 elastic:
   url: ELASTIC_HOST
