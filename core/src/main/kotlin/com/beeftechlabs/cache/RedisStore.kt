@@ -9,6 +9,7 @@ import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPoolConfig
 import redis.clients.jedis.params.SetParams
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 object RedisStore {
 
@@ -70,6 +71,12 @@ object RedisStore {
                 logger.error(exception) { "Error setting $key" }
             }
         }
+    }
+
+    fun getTtl(key: String): Duration {
+        return jedisPool?.resource?.use { jedis ->
+            jedis.ttl(key).takeIf { it > 0 }?.seconds
+        } ?: 0.seconds
     }
 
     fun clear() {

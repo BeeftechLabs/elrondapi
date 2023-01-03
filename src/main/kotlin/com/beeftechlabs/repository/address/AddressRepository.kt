@@ -27,12 +27,13 @@ object AddressRepository {
         withTokens: Boolean,
         withNfts: Boolean,
         withSfts: Boolean,
-        withStake: Boolean
+        withStake: Boolean,
+        process: Boolean
     ): AddressDetails = coroutineScope {
         startCustomTrace("AddressDetails:$address")
-        val tokens = async { if (withTokens) TokenRepository.getEsdtsForAddress(address) else null }
-        val nfts = async { if (withNfts) TokenRepository.getNftsForAddress(address) else null }
-        val sfts = async { if (withSfts) TokenRepository.getSftsForAddress(address) else null }
+        val tokens = async { if (withTokens) TokenRepository.getEsdtsForAddress(address, process) else null }
+        val nfts = async { if (withNfts) TokenRepository.getNftsForAddress(address, process) else null }
+        val sfts = async { if (withSfts) TokenRepository.getSftsForAddress(address, process) else null }
         val delegations = async { if (withDelegations) StakingRepository.getDelegations(address) else null }
         val staked = async { if (withStake) StakingRepository.getStaked(address) else null }
         val account = withContext(Dispatchers.IO) { getAccountFromGateway(address) }

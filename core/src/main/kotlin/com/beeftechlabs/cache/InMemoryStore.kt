@@ -29,9 +29,10 @@ object InMemoryStore {
         return if (config.memoryStore) store[key]?.first as? T else null
     }
 
-    fun <T> set(key: String, data: T?) {
+    fun <T> set(key: String, data: T?, newTTL: Boolean = true) {
         if (config.memoryStore) {
-            store[key] = data as Any to getTimeMillis()
+            val expire = if (newTTL) { getTimeMillis() } else { store[key]?.second ?: 0L }
+            store[key] = data as Any to expire
         }
     }
 }

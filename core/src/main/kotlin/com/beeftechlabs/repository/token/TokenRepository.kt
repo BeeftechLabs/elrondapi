@@ -1,8 +1,6 @@
 package com.beeftechlabs.repository.token
 
-import com.beeftechlabs.cache.CacheType
-import com.beeftechlabs.cache.putInCache
-import com.beeftechlabs.cache.withCache
+import com.beeftechlabs.cache.*
 import com.beeftechlabs.config
 import com.beeftechlabs.model.address.Address
 import com.beeftechlabs.model.smartcontract.ScQueryRequest
@@ -13,10 +11,8 @@ import com.beeftechlabs.repository.token.model.FungibleTokenResponse
 import com.beeftechlabs.repository.token.model.GetEsdtsResponse
 import com.beeftechlabs.repository.token.model.GetNftResponse
 import com.beeftechlabs.service.GatewayService
-import com.beeftechlabs.util.fromBase64String
-import com.beeftechlabs.util.fromBase64ToHexString
-import com.beeftechlabs.util.toHexString
-import com.beeftechlabs.util.tryCoroutineOrDefault
+import com.beeftechlabs.util.*
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -75,27 +71,37 @@ object TokenRepository {
         endCustomTrace("AllSfts")
     }
 
-    suspend fun getEsdtsForAddress(address: String): List<Token> = coroutineScope {
+    suspend fun getEsdtsForAddress(address: String, process: Boolean): List<Token> = coroutineScope {
         startCustomTrace("TokensForAddress:$address")
         val addressEsdtsDeferred =
             async { tryCoroutineOrDefault(emptyList()) { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values } }
-        val esdtsDeferred = async { Esdts.all() }
+        val esdtsDeferred = async { if (process) { Esdts.all() } else { Esdts(emptyList()) } }
 
         val assets = AllTokenAssets.get().value
         val esdts = esdtsDeferred.await().value.associateBy { it.identifier }
         val addressEsdts = addressEsdtsDeferred.await()
 
-        addressEsdts.mapNotNull { esdt ->
-            val identifierParts = esdt.tokenIdentifier.split("-")
-            val commonIdentifier = identifierParts.take(2).joinToString("-")
-            (esdts[commonIdentifier]
-                ?: getTokenProperties(commonIdentifier)
-                    .takeIf { it.type == TokenType.ESDT || it.type == TokenType.MetaESDT }?.copy(
-                        assets = assets[commonIdentifier]
-                    ))?.let {
+        if (process) {
+            addressEsdts.mapNotNull { esdt ->
+                val identifierParts = esdt.tokenIdentifier.split("-")
+                val commonIdentifier = identifierParts.take(2).joinToString("-")
+                (esdts[commonIdentifier]
+                    ?: getTokenProperties(commonIdentifier)
+                        .takeIf { it.type == TokenType.ESDT || it.type == TokenType.MetaESDT }?.copy(
+                            assets = assets[commonIdentifier]
+                        ))?.let {
+                    Token(
+                        value = Value.extract(esdt.balance, esdt.tokenIdentifier),
+                        properties = it,
+                        data = null
+                    )
+                }
+            }
+        } else {
+            addressEsdts.map { esdt ->
                 Token(
                     value = Value.extract(esdt.balance, esdt.tokenIdentifier),
-                    properties = it,
+                    properties = null,
                     data = null
                 )
             }
@@ -107,41 +113,51 @@ object TokenRepository {
     suspend fun getEsdtWithId(id: String): TokenProperties? =
         Esdts.all().value.firstOrNull { it.identifier == id }
 
-    suspend fun getNftsForAddress(address: String): List<Token> = coroutineScope {
+    suspend fun getNftsForAddress(address: String, process: Boolean): List<Token> = coroutineScope {
         startCustomTrace("NftsForAddress:$address")
         val esdtsDeferred =
             async { tryCoroutineOrDefault(emptyList()) { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values } }
-        val nftsDeferred = async { Nfts.all() }
+        val nftsDeferred = async { if (process) { Nfts.all() } else { Nfts(emptyList()) } }
 
         val esdts = esdtsDeferred.await()
         val nfts = nftsDeferred.await().value.associateBy { it.identifier }
 
-        val nftsWithoutData = esdts.mapNotNull { esdt ->
-            val identifierParts = esdt.tokenIdentifier.split("-")
-            val commonIdentifier = identifierParts.take(2).joinToString("-")
-            (nfts[commonIdentifier]
-                ?: getTokenProperties(commonIdentifier)
-                    .takeIf { it.type == TokenType.NFT })?.let {
+        if (process) {
+            val nftsWithoutData = esdts.mapNotNull { esdt ->
+                val identifierParts = esdt.tokenIdentifier.split("-")
+                val commonIdentifier = identifierParts.take(2).joinToString("-")
+                (nfts[commonIdentifier]
+                    ?: getTokenProperties(commonIdentifier)
+                        .takeIf { it.type == TokenType.NFT })?.let {
+                    Token(
+                        value = Value.extract(esdt.balance, esdt.tokenIdentifier),
+                        properties = it,
+                        data = null
+                    )
+                }
+            }
+
+            nftsWithoutData.chunked(NUM_PARALLEL_FETCH)
+                .map { chunk ->
+                    chunk.map { token ->
+                        async {
+                            val tokenData = getNftData(address, token.value.token)
+                            token.copy(data = tokenData.copy(
+                                attributes = tokenData.attributes?.fromBase64String(),
+                                uris = tokenData.uris?.map { it.fromBase64String() }
+                            ))
+                        }
+                    }.awaitAll()
+                }.flatten()
+        } else {
+            esdts.map { esdt ->
                 Token(
                     value = Value.extract(esdt.balance, esdt.tokenIdentifier),
-                    properties = it,
+                    properties = null,
                     data = null
                 )
             }
         }
-
-        nftsWithoutData.chunked(NUM_PARALLEL_FETCH)
-            .map { chunk ->
-                chunk.map { token ->
-                    async {
-                        val tokenData = getNftData(address, token.value.token)
-                        token.copy(data = tokenData.copy(
-                            attributes = tokenData.attributes?.fromBase64String(),
-                            uris = tokenData.uris?.map { it.fromBase64String() }
-                        ))
-                    }
-                }.awaitAll()
-            }.flatten()
     }.also {
         endCustomTrace("NftsForAddress:$address")
     }
@@ -172,24 +188,34 @@ object TokenRepository {
         return null
     }
 
-    suspend fun getSftsForAddress(address: String): List<Token> = coroutineScope {
+    suspend fun getSftsForAddress(address: String, process: Boolean): List<Token> = coroutineScope {
         startCustomTrace("SftsForAddress:$address")
         val esdtsDeferred =
             async { tryCoroutineOrDefault(emptyList()) { GatewayService.get<GetEsdtsResponse>("address/$address/esdt").data.esdts.values } }
-        val sftsDeferred = async { Sfts.all() }
+        val sftsDeferred = async { if (process) { Sfts.all() } else { Sfts(emptyList()) } }
 
         val esdts = esdtsDeferred.await()
         val sfts = sftsDeferred.await().value.associateBy { it.identifier }
 
-        esdts.mapNotNull { esdt ->
-            val identifierParts = esdt.tokenIdentifier.split("-")
-            val commonIdentifier = identifierParts.take(2).joinToString("-")
-            (sfts[commonIdentifier]
-                ?: getTokenProperties(commonIdentifier)
-                    .takeIf { it.type == TokenType.SFT })?.let {
+        if (process) {
+            esdts.mapNotNull { esdt ->
+                val identifierParts = esdt.tokenIdentifier.split("-")
+                val commonIdentifier = identifierParts.take(2).joinToString("-")
+                (sfts[commonIdentifier]
+                    ?: getTokenProperties(commonIdentifier)
+                        .takeIf { it.type == TokenType.SFT })?.let {
+                    Token(
+                        value = Value.extract(esdt.balance, commonIdentifier) ?: Value.zero(identifierParts.first()),
+                        properties = it,
+                        data = null
+                    )
+                }
+            }
+        } else {
+            esdts.map { esdt ->
                 Token(
-                    value = Value.extract(esdt.balance, commonIdentifier) ?: Value.zero(identifierParts.first()),
-                    properties = it,
+                    value = Value.extract(esdt.balance, esdt.tokenIdentifier),
+                    properties = null,
                     data = null
                 )
             }
@@ -201,27 +227,38 @@ object TokenRepository {
     suspend fun getSftWithId(id: String): TokenProperties? =
         Sfts.all().value.firstOrNull { it.identifier == id }
 
-    suspend fun getTokenWithId(id: String): TokenProperties? = coroutineScope {
+    private suspend fun getTokenPropertiesWithId(id: String): TokenProperties = coroutineScope {
         val realID = id.split("-").take(2).joinToString("-")
 
-        val esdtsDeferred = async { Esdts.all().value }
-        val nftsDeferred = async { Nfts.all().value }
-        val sftsDeferred = async { Sfts.all().value }
+        val esdtsDeferred: Deferred<Esdts?> = async { peekCache(CacheType.Esdts) }
+        val nftsDeferred: Deferred<Nfts?> = async { peekCache(CacheType.Nfts) }
+        val sftsDeferred: Deferred<Sfts?> = async { peekCache(CacheType.Sfts) }
 
-        getTokenPropertiesForId(realID, esdtsDeferred.await())
-            ?: getTokenPropertiesForId(realID, sftsDeferred.await())
-            ?: getTokenPropertiesForId(realID, nftsDeferred.await())
+        val esdts = esdtsDeferred.await()?.value ?: emptyList()
+        val sfts = sftsDeferred.await()?.value ?: emptyList()
+        val nfts = nftsDeferred.await()?.value ?: emptyList()
+
+        getTokenPropertiesForId(realID, esdts)
+            ?: getTokenPropertiesForId(realID, sfts)
+            ?: getTokenPropertiesForId(realID, nfts)
+            ?: getTokenProperties(id.collectionId()).also { props ->
+                when (props.type) {
+                    TokenType.ESDT, TokenType.MetaESDT -> updateInCache(CacheType.Esdts, Esdts(esdts + props))
+                    TokenType.SFT -> updateInCache(CacheType.Sfts, Sfts(sfts + props))
+                    TokenType.NFT -> updateInCache(CacheType.Nfts, Nfts(nfts + props))
+                }
+            }
     }
 
     suspend fun getDecimalsForToken(id: String): Int =
         if (id == "EGLD") {
             18
         } else {
-            getTokenWithId(id)?.decimals ?: 18
+            getTokenPropertiesWithId(id).decimals
         }
 
-    private fun getTokenPropertiesForId(id: String, tokens: List<TokenProperties>): TokenProperties? =
-        tokens.find { it.identifier == id }
+    private fun getTokenPropertiesForId(id: String, tokens: List<TokenProperties>?): TokenProperties? =
+        tokens?.find { it.identifier == id }
 
     private suspend fun getTokenProperties(id: String, collection: String? = null): TokenProperties {
         val response = GatewayService.vmQuery(
@@ -289,6 +326,7 @@ object TokenRepository {
 data class Esdts(
     val value: List<TokenProperties>
 ) {
+
     companion object {
         suspend fun all(skipCache: Boolean = false) = if (skipCache) {
             TokenRepository.getAllEsdts().also { putInCache(CacheType.Esdts, it) }

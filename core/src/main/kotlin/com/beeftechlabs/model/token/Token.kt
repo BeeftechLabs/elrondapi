@@ -5,6 +5,6 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Token(
     val value: Value,
-    val properties: TokenProperties,
+    val properties: TokenProperties? = null,
     val data: TokenData? = null
 )

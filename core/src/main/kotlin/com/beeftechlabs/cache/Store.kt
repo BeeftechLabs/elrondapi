@@ -29,6 +29,12 @@ suspend inline fun <reified T> putInCache(key: String, data: T?, ttl: Duration) 
     InMemoryStore.set(key, data)
 }
 
+suspend inline fun <reified T> updateInCache(type: CacheType, data: T?, instance: String = "") = coroutineScope {
+    val key = if (instance.isNotEmpty()) "${type.name}:$instance" else type.name
+    launch(Dispatchers.IO) { RedisStore.set(key, data, RedisStore.getTtl(key)) }
+    InMemoryStore.set(key, data, newTTL = false)
+}
+
 suspend inline fun <reified T> withCache(type: CacheType, instance: String = "", producer: () -> T): T {
     return if (type.ttl.inWholeSeconds > 0) {
         if (type.isAtomic) {

@@ -36,6 +36,7 @@ fun Routing.addressRoutes() {
             val withNfts = call.request.queryParameters["withNfts"]?.toBooleanStrictOrNull() ?: false
             val withSfts = call.request.queryParameters["withSfts"]?.toBooleanStrictOrNull() ?: false
             val withStake = call.request.queryParameters["withStake"]?.toBooleanStrictOrNull() ?: false
+            val process = call.parameters["process"]?.toBooleanStrictOrNull() ?: false
             if (address.isNullOrEmpty()) {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
@@ -47,7 +48,8 @@ fun Routing.addressRoutes() {
                             withTokens,
                             withNfts,
                             withSfts,
-                            withStake
+                            withStake,
+                            process
                         )
                     )
                 }
@@ -78,33 +80,36 @@ fun Routing.addressRoutes() {
 
         get("/addresses/{address}/tokens") {
             val address = call.parameters["address"]
+            val process = call.parameters["process"]?.toBooleanStrictOrNull() ?: false
             if (address.isNullOrEmpty()) {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
                 withContext(Dispatchers.IO) {
-                    call.respond(TokenRepository.getEsdtsForAddress(address))
+                    call.respond(TokenRepository.getEsdtsForAddress(address, process))
                 }
             }
         }
 
         get("/addresses/{address}/nfts") {
             val address = call.parameters["address"]
+            val process = call.parameters["process"]?.toBooleanStrictOrNull() ?: false
             if (address.isNullOrEmpty()) {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
                 withContext(Dispatchers.IO) {
-                    call.respond(TokenRepository.getNftsForAddress(address))
+                    call.respond(TokenRepository.getNftsForAddress(address, process))
                 }
             }
         }
 
         get("/addresses/{address}/sfts") {
             val address = call.parameters["address"]
+            val process = call.parameters["process"]?.toBooleanStrictOrNull() ?: false
             if (address.isNullOrEmpty()) {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
                 withContext(Dispatchers.IO) {
-                    call.respond(TokenRepository.getSftsForAddress(address))
+                    call.respond(TokenRepository.getSftsForAddress(address, process))
                 }
             }
         }
