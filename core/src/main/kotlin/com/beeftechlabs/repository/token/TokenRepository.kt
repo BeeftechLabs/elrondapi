@@ -82,7 +82,7 @@ object TokenRepository {
         val addressEsdts = addressEsdtsDeferred.await()
 
         if (process) {
-            addressEsdts.mapNotNull { esdt ->
+            val esdtsWithoutData = addressEsdts.mapNotNull { esdt ->
                 val identifierParts = esdt.tokenIdentifier.split("-")
                 val commonIdentifier = identifierParts.take(2).joinToString("-")
                 (esdts[commonIdentifier]
@@ -97,6 +97,18 @@ object TokenRepository {
                     )
                 }
             }
+            esdtsWithoutData.chunked(NUM_PARALLEL_FETCH)
+                .map { chunk ->
+                    chunk.map { token ->
+                        async {
+                            val tokenData = getNftData(address, token.value.token)
+                            token.copy(data = tokenData.copy(
+                                attributes = tokenData.attributes,
+                                uris = tokenData.uris?.map { it.fromBase64String() }
+                            ))
+                        }
+                    }.awaitAll()
+                }.flatten()
         } else {
             addressEsdts.map { esdt ->
                 Token(
@@ -143,7 +155,7 @@ object TokenRepository {
                         async {
                             val tokenData = getNftData(address, token.value.token)
                             token.copy(data = tokenData.copy(
-                                attributes = tokenData.attributes?.fromBase64String(),
+                                attributes = tokenData.attributes,
                                 uris = tokenData.uris?.map { it.fromBase64String() }
                             ))
                         }
