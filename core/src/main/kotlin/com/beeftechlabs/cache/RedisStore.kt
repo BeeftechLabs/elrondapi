@@ -73,10 +73,10 @@ object RedisStore {
         }
     }
 
-    fun getTtl(key: String): Duration {
+    fun getTtl(key: String, cacheType: CacheType): Duration {
         return jedisPool?.resource?.use { jedis ->
             jedis.ttl(key).takeIf { it > 0 }?.seconds
-        } ?: 0.seconds
+        } ?: cacheType.ttl
     }
 
     fun clear() {

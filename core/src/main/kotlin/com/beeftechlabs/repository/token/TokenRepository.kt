@@ -113,7 +113,7 @@ object TokenRepository {
             addressEsdts.map { esdt ->
                 Token(
                     value = Value.extract(esdt.balance, esdt.tokenIdentifier),
-                    properties = null,
+                    properties = TokenProperties.DEFAULT,
                     data = null
                 )
             }
@@ -165,7 +165,7 @@ object TokenRepository {
             esdts.map { esdt ->
                 Token(
                     value = Value.extract(esdt.balance, esdt.tokenIdentifier),
-                    properties = null,
+                    properties = TokenProperties.DEFAULT,
                     data = null
                 )
             }
@@ -227,7 +227,7 @@ object TokenRepository {
             esdts.map { esdt ->
                 Token(
                     value = Value.extract(esdt.balance, esdt.tokenIdentifier),
-                    properties = null,
+                    properties = TokenProperties.DEFAULT,
                     data = null
                 )
             }
@@ -331,7 +331,7 @@ object TokenRepository {
 
     private const val NUM_PARALLEL_FETCH = 100
 
-    val logger = KotlinLogging.logger {}
+    private val logger = KotlinLogging.logger {}
 }
 
 @Serializable

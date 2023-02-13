@@ -36,7 +36,7 @@ fun Routing.addressRoutes() {
             val withNfts = call.request.queryParameters["withNfts"]?.toBooleanStrictOrNull() ?: false
             val withSfts = call.request.queryParameters["withSfts"]?.toBooleanStrictOrNull() ?: false
             val withStake = call.request.queryParameters["withStake"]?.toBooleanStrictOrNull() ?: false
-            val process = call.parameters["process"]?.toBooleanStrictOrNull() ?: false
+            val process = call.parameters["process"]?.toBooleanStrictOrNull() ?: true
             if (address.isNullOrEmpty()) {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {

@@ -26,4 +26,30 @@ data class TokenProperties(
     val nftCreateStopped: Boolean,
     val wiped: String?,
     val assets: TokenAssets? = null
-)
+) {
+    companion object {
+        val DEFAULT = TokenProperties(
+            identifier = "",
+            collection = null,
+            name = "",
+            type = TokenType.ESDT,
+            owner = "",
+            minted = "",
+            burnt = "",
+            decimals = 0,
+            isPaused = false,
+            canUpgrade = false,
+            canMint = false,
+            canBurn = false,
+            canChangeOwner = false,
+            canPause = false,
+            canFreeze = false,
+            canWipe = false,
+            canAddSpecialRoles = false,
+            canTransferNFTCreateRole = false,
+            nftCreateStopped = false,
+            wiped = null,
+            assets = null
+        )
+    }
+}

@@ -58,6 +58,20 @@ fun Routing.adminRoutes() {
         }
     }
 
+    post("/admin/refreshNfts") {
+        val refreshRequest = call.receive<RefreshRequest>()
+
+        if (refreshRequest.secret == config.secret) {
+            coroutineScope {
+                launch(Dispatchers.IO) { Nfts.all(true) }
+            }
+
+            call.response.status(HttpStatusCode.OK)
+        } else {
+            call.response.status(HttpStatusCode.Unauthorized)
+        }
+    }
+
     post("/admin/refreshTokenAssets") {
         val refreshRequest = call.receive<RefreshRequest>()
 
