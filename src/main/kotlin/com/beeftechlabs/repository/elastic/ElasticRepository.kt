@@ -162,17 +162,10 @@ object ElasticRepository {
             processedTransactions.filter { it.decodedData?.matches(decodedDataFilter.toRegex()) == true }
         } ?: processedTransactions
 
-        val filteredByToken = request.includesToken?.let { token ->
-            processedTransactions.filter {
-                it.outValues.any { value -> value.token == token } ||
-                        it.inValues.any { value -> value.token == token }
-            }
-        } ?: filteredByData
-
         val final = if (!request.includeScResults && hasScResults) {
-            filteredByToken.map { it.copy(scResults = emptyList()) }
+            filteredByData.map { it.copy(scResults = emptyList()) }
         } else {
-            filteredByToken
+            filteredByData
         }
 
         return TransactionsResponse(

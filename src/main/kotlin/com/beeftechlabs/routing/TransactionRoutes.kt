@@ -45,7 +45,7 @@ fun Routing.transactionRoutes() {
                     addressQueryType = call.request.queryParameters["addressQueryType"]?.let {
                         AddressQueryType.valueOf(it)
                     } ?: default.addressQueryType,
-                    includesToken = call.request.queryParameters["includesToken"] ?: default.decodedDataFilter,
+                    includesToken = call.request.queryParameters["includesToken"] ?: default.includesToken,
                 )
             }
 

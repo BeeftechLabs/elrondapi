@@ -41,10 +41,10 @@ object DataDecoder {
                 }
             } else {
                 val string = term.fromHexString()
-                val parsed = if (string.any { !it.isLetter() && it != ' ' }) {
-                    term.toBigIntegerOrNull(16)?.toString() ?: string
-                } else {
+                val parsed = if (string.wasProbablyString()) {
                     string
+                } else {
+                    term.toBigIntegerOrNull(16)?.toString() ?: string
                 }
                 additional.add(parsed)
             }
@@ -83,4 +83,9 @@ object DataDecoder {
 
         return listOfNotNull(token, nonce, value, optAddress, function) + additional
     }
+
+    private fun String.wasProbablyString() =
+        !any { !it.isLetter() && !it.isDigit() && !ALLOWED_STRING_SYM.contains(it) }
+
+    private val ALLOWED_STRING_SYM = listOf(' ', '-')
 }
