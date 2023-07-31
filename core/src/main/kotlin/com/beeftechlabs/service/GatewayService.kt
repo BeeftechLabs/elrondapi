@@ -2,7 +2,6 @@ package com.beeftechlabs.service
 
 import com.beeftechlabs.api.HttpClientFactory
 import com.beeftechlabs.config
-import com.beeftechlabs.model.smartcontract.ScQueryData
 import com.beeftechlabs.model.smartcontract.ScQueryRequest
 import com.beeftechlabs.model.smartcontract.ScQueryResponse
 import io.ktor.client.call.*
@@ -23,22 +22,9 @@ object GatewayService {
         setBody(request)
     }.body()
 
-    suspend fun vmQuery(scQueryRequest: ScQueryRequest): ScQueryData =
-        if (elrondConfig.api.isNullOrEmpty()) {
-            vmQueryGateway(scQueryRequest)
-        } else {
-            vmQueryApi(scQueryRequest)
-        }
-
-    suspend fun vmQueryGateway(scQueryRequest: ScQueryRequest): ScQueryData =
+    suspend fun vmQuery(scQueryRequest: ScQueryRequest): ScQueryResponse =
         client.post {
             url("${elrondConfig.proxy}/vm-values/query")
-            setBody(scQueryRequest)
-        }.body<ScQueryResponse>().data.data
-
-    suspend fun vmQueryApi(scQueryRequest: ScQueryRequest): ScQueryData =
-        client.post {
-            url("${elrondConfig.api}/query")
             setBody(scQueryRequest)
         }.body()
 }
