@@ -15,6 +15,6 @@ data class ScQueryDataWrapper(
 @Serializable
 data class ScQueryData(
     val returnData: List<String?>? = null,
-    val returnCode: String,
+    val returnCode: String? = null,
     val returnMessage: String? = null
 )

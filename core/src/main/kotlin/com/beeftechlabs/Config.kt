@@ -41,7 +41,8 @@ data class Elrond(
     val staking: String,
     val auction: String,
     val esdt: String,
-    val mdexPair: String
+    val mdexPair: String,
+    val api: String? = null
 )
 
 data class Redis(

@@ -22,7 +22,7 @@ object SCService {
             )
         )
 
-        return response.data.data.returnData?.mapNotNull { it } ?: emptyList()
+        return response.returnData?.mapNotNull { it } ?: emptyList()
     }
 
     suspend fun vmQueryParsed(
@@ -31,7 +31,7 @@ object SCService {
         val response = GatewayService.vmQuery(request)
 
         return ScQueryParsedResponse(
-            response.data.data.returnData?.mapNotNull { it }?.map(ScQueryResultData::fromString) ?: emptyList()
+            response.returnData?.mapNotNull { it }?.map(ScQueryResultData::fromString) ?: emptyList()
         )
     }
 

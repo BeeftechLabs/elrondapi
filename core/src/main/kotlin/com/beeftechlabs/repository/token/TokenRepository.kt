@@ -273,11 +273,11 @@ object TokenRepository {
         tokens?.find { it.identifier == id }
 
     private suspend fun getTokenProperties(id: String, collection: String? = null): TokenProperties {
-        val response = GatewayService.vmQuery(
+        val response = GatewayService.vmQueryGateway(
             ScQueryRequest(elrondConfig.esdt, "getTokenProperties", listOf(id.toHexString()))
         )
 
-        val properties = response.data.data.returnData?.mapIndexed { index, data ->
+        val properties = response.returnData?.mapIndexed { index, data ->
             if (index != 2) {
                 data?.fromBase64String()?.let {
                     if (it.contains("-")) {
