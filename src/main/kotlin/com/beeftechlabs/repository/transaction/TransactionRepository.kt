@@ -10,18 +10,28 @@ object TransactionRepository {
     suspend fun getTransaction(hash: String, process: Boolean): Transaction? =
         ElasticRepository.getTransaction(hash, process)
 
-    suspend fun getTransactionState(hash: String): NewTransactionState {
-        val response = GatewayService.get<GetTransactionResponse>("transaction/$hash")
+    suspend fun getTransactionState(hash: String, checkCompletedTXEvent: Boolean): NewTransactionState {
+        val response = GatewayService.get<GetTransactionResponse>("transaction/$hash?withResults=true")
         val transaction = response.data.transaction
+
+        var txStatus = when (transaction.status) {
+            "success" -> NewTransactionStatus.Success
+            "invalid" -> NewTransactionStatus.Failed
+            else -> NewTransactionStatus.Pending
+        }
+
+        if (txStatus == NewTransactionStatus.Success && checkCompletedTXEvent) {
+            if (transaction.smartContractResults
+                .find { it.logs?.events?.any { it.identifier == "completedTxEvent" } == true } == null) {
+                txStatus = NewTransactionStatus.Pending
+            }
+        }
+
         return NewTransactionState(
             hash = hash,
             receiverShard = transaction.destinationShard,
             senderShard = transaction.sourceShard,
-            status = when (transaction.status) {
-                "success" -> NewTransactionStatus.Success
-                "invalid" -> NewTransactionStatus.Failed
-                else -> NewTransactionStatus.Pending
-            },
+            status = txStatus,
             error = response.error
         )
     }

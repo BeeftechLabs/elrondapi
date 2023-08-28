@@ -115,10 +115,12 @@ fun Routing.transactionRoutes() {
             startCallTrace()
 
             val hash = call.parameters["hash"]
+            val checkCompletedTXEvent = call.request.queryParameters["checkCompletedTXEvent"]
+                ?.toBooleanStrictOrNull() ?: false
             if (hash.isNullOrEmpty()) {
                 call.response.status(HttpStatusCode.BadRequest)
             } else {
-                call.respond(TransactionRepository.getTransactionState(hash))
+                call.respond(TransactionRepository.getTransactionState(hash, checkCompletedTXEvent))
             }
 
             endCallTrace()

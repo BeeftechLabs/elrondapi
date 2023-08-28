@@ -18,4 +18,21 @@ data class GetTransactionWrapper(
     val status: String,
     val sourceShard: Long,
     val destinationShard: Long,
+    val smartContractResults: List<TxSmartContractResult> = emptyList()
+)
+
+@Serializable
+data class TxSmartContractResult(
+    val logs: TXSCResultLogs? = null
+)
+
+@Serializable
+data class TXSCResultLogs(
+    val events: List<TXSCRLEvent> = emptyList()
+)
+
+@Serializable
+data class TXSCRLEvent(
+    val address: String,
+    val identifier: String
 )
