@@ -21,7 +21,9 @@ object TransactionRepository {
         }
 
         if (txStatus == NewTransactionStatus.Success && checkCompletedTXEvent) {
-            if (transaction.logs?.events?.none { it.identifier == "completedTxEvent" } == true) {
+            if (transaction.logs?.events?.any { failedTxEvents.contains(it.identifier) } == true) {
+                txStatus = NewTransactionStatus.Failed
+            } else if (transaction.logs?.events?.none { it.identifier == "completedTxEvent" } == true) {
                 txStatus = NewTransactionStatus.Pending
             }
         }
@@ -58,4 +60,6 @@ object TransactionRepository {
             error = response.data?.error ?: response.error
         )
     }
+
+    private val failedTxEvents = listOf("signalError", "internalVMErrors")
 }
