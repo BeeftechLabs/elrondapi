@@ -21,9 +21,10 @@ object TransactionRepository {
         }
 
         if (txStatus == NewTransactionStatus.Success && checkCompletedTXEvent) {
-            if (transaction.logs?.events?.any { failedTxEvents.contains(it.identifier) } == true) {
+            val allEvents = transaction.allEvents()
+            if (allEvents.any { failedTxEvents.contains(it.identifier) }) {
                 txStatus = NewTransactionStatus.Failed
-            } else if (transaction.logs?.events?.none { it.identifier == "completedTxEvent" } == true) {
+            } else if (allEvents.none { it.identifier == "completedTxEvent" }) {
                 txStatus = NewTransactionStatus.Pending
             }
         }

@@ -18,8 +18,16 @@ data class GetTransactionWrapper(
     val status: String,
     val sourceShard: Long,
     val destinationShard: Long,
-    val logs: TXSCResultLogs? = null
+    val logs: TXSCResultLogs? = null,
+    val smartContractResults: List<TxSmartContractResult> = emptyList()
+) {
+    fun allEvents(): List<TXSCRLEvent> = smartContractResults.flatMap { it.logs?.events ?: emptyList() } +
+            (logs?.events ?: emptyList())
+}
 
+@Serializable
+data class TxSmartContractResult(
+    val logs: TXSCResultLogs? = null
 )
 
 @Serializable
