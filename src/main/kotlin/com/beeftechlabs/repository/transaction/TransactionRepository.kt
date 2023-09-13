@@ -21,8 +21,7 @@ object TransactionRepository {
         }
 
         if (txStatus == NewTransactionStatus.Success && checkCompletedTXEvent) {
-            if (transaction.smartContractResults
-                .find { it.logs?.events?.any { it.identifier == "completedTxEvent" } == true } == null) {
+            if (transaction.logs?.events?.none { it.identifier == "completedTxEvent" } == true) {
                 txStatus = NewTransactionStatus.Pending
             }
         }
