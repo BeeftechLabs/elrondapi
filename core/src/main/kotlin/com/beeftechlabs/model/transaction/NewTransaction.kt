@@ -13,9 +13,12 @@ data class NewTransaction(
     val nonce: Long,
     val receiver: String,
     val sender: String,
+    val guardian: String? = null,
+    val guardianSignature: String? = null,
     val signature: String,
     val value: String,
-    val version: Int
+    val version: Int,
+    val options: Int? = null,
 )
 
 @Serializable
