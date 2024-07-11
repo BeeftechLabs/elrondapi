@@ -2,18 +2,14 @@ package com.beeftechlabs.repository.address
 
 import com.beeftechlabs.model.address.AddressDetails
 import com.beeftechlabs.model.address.AddressesResponse
-import com.beeftechlabs.model.core.LongValue
 import com.beeftechlabs.model.token.Value
 import com.beeftechlabs.plugins.endCustomTrace
 import com.beeftechlabs.plugins.startCustomTrace
 import com.beeftechlabs.repository.StakingRepository
 import com.beeftechlabs.repository.address.CoreAddressRepository.getAccountFromGateway
-import com.beeftechlabs.repository.address.model.Account
 import com.beeftechlabs.repository.address.model.AddressSort
-import com.beeftechlabs.repository.address.model.GetAccountResponse
 import com.beeftechlabs.repository.elastic.ElasticRepository
 import com.beeftechlabs.repository.token.TokenRepository
-import com.beeftechlabs.service.GatewayService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
